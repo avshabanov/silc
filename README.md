@@ -1,4 +1,10 @@
-Inspired by lisp500 and tinyscheme silc is a small lisp implementation.
+*WARNING*
+
+This is still work in progress.
+
+## Overview
+
+Inspired by lisp500 and tinyscheme silc is a small lisp implementation. It is made just for fun and mostly to demonstrate lambda calculus interpretation.
 It features moveable garbage collector and is perfect for use in a constrained environment (all allocations are made in a limited region of heap).
 
 ## How to build
