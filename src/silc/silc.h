@@ -83,6 +83,14 @@ struct silc_ctx_t;
  */
 #define SILC_GET_INL_SUBTYPE(inl_o)   (((inl_o) >> SILC_OBJ_TYPE_SHIFT) & SILC_OBJ_INL_SUBTYPE_MASK)
 
+/** Returns content of the inline object stripped from type and subtype information */
+#define SILC_GET_INL_CONTENT(content) ((content) >> (SILC_OBJ_TYPE_SHIFT + SILC_OBJ_INL_SUBTYPE_SHIFT))
+
+/** Creates inline object along with the type and subtype information */
+#define SILC_MAKE_INL_OBJECT(content, subtype)  (SILC_OBJ_INL_TYPE | \
+                                                ((subtype) << SILC_OBJ_TYPE_SHIFT) | \
+                                                ((content) << (SILC_OBJ_TYPE_SHIFT + SILC_OBJ_INL_SUBTYPE_SHIFT)))
+
 /**
  * Total count of bits in the inline object content.
  * Inline object layout: [{..inline object content..}{subtype bits}{type bits}]
@@ -162,8 +170,7 @@ static inline const char* silc_err_code_to_str(int code) {
 
 static inline silc_obj silc_err_from_code(int err_code) {
   assert(err_code > 0 && err_code < SILC_MAX_ERR_CODE);
-  return (SILC_OBJ_INL_TYPE | (SILC_OBJ_INL_SUBTYPE_ERR << SILC_OBJ_TYPE_SHIFT) |
-    (err_code << (SILC_OBJ_TYPE_SHIFT + SILC_OBJ_INL_SUBTYPE_SHIFT)));
+  return SILC_MAKE_INL_OBJECT(err_code, SILC_OBJ_INL_SUBTYPE_ERR);
 }
 
 /**
@@ -175,7 +182,7 @@ static inline int silc_try_get_err_code(silc_obj obj) {
     return -1;
   }
 
-  return obj >> (SILC_OBJ_TYPE_SHIFT + SILC_OBJ_INL_SUBTYPE_SHIFT);
+  return SILC_GET_INL_CONTENT(obj);
 }
 
 /**
@@ -214,27 +221,16 @@ static inline int silc_try_get_err_code(silc_obj obj) {
 
 /* Base constants */
 
-#define SILC_OBJ_FALSE_VAL            (0)
-#define SILC_OBJ_TRUE_VAL             (1)
-
-#define SILC_OBJ_NIL                  (SILC_OBJ_INL_TYPE | \
-                                      (SILC_OBJ_INL_SUBTYPE_NIL << SILC_OBJ_TYPE_SHIFT))
-
+#define SILC_OBJ_NIL                  SILC_MAKE_INL_OBJECT(0, SILC_OBJ_INL_SUBTYPE_NIL)
 
 /* Inline false value */
-#define SILC_OBJ_FALSE                (SILC_OBJ_INL_TYPE | \
-                                      (SILC_OBJ_INL_SUBTYPE_BOOL << SILC_OBJ_TYPE_SHIFT) | \
-                                      (SILC_OBJ_FALSE_VAL << (SILC_OBJ_TYPE_SHIFT + SILC_OBJ_INL_SUBTYPE_SHIFT)))
+#define SILC_OBJ_FALSE                SILC_MAKE_INL_OBJECT(0, SILC_OBJ_INL_SUBTYPE_BOOL)
 
 /* Inline true value */
-#define SILC_OBJ_TRUE                 (SILC_OBJ_INL_TYPE | \
-                                      (SILC_OBJ_INL_SUBTYPE_BOOL << SILC_OBJ_TYPE_SHIFT) | \
-                                      (SILC_OBJ_TRUE_VAL << (SILC_OBJ_TYPE_SHIFT + SILC_OBJ_INL_SUBTYPE_SHIFT)))
-
+#define SILC_OBJ_TRUE                 SILC_MAKE_INL_OBJECT(1, SILC_OBJ_INL_SUBTYPE_BOOL)
 
 /* Zero integer */
-#define SILC_OBJ_ZERO                 (SILC_OBJ_INL_TYPE | \
-                                      (SILC_OBJ_INL_SUBTYPE_INT << SILC_OBJ_TYPE_SHIFT))
+#define SILC_OBJ_ZERO                 SILC_MAKE_INL_OBJECT(0, SILC_OBJ_INL_SUBTYPE_INT)
 
 
 
@@ -290,7 +286,7 @@ static inline silc_obj silc_int_to_obj(int val) {
 static inline int silc_obj_to_int(silc_obj o) {
   assert((SILC_GET_TYPE(o) == SILC_OBJ_INL_TYPE) && (SILC_GET_INL_SUBTYPE(o) == SILC_OBJ_INL_SUBTYPE_INT));
 
-  int val = (int) (o >> (SILC_OBJ_TYPE_SHIFT + SILC_OBJ_INL_SUBTYPE_SHIFT));
+  int val = SILC_GET_INL_CONTENT(o);
   if (val & SILC_INT_SIGN_BIT) {
     /* negative */
     val = val & (~SILC_INT_SIGN_BIT);
