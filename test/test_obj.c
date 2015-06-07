@@ -4,12 +4,12 @@
 #include "silc.h"
 
 BEGIN_TEST_METHOD(test_object_type)
-  struct silc_ctx_t * c = silc_new_context();
-  silc_obj o;
-
-  o = SILC_OBJ_NIL;
-
-  silc_free_context(c);
+  assert(SILC_OBJ_INL_TYPE  != SILC_OBJ_CONS_TYPE &&
+         SILC_OBJ_INL_TYPE  != SILC_OBJ_OREF_TYPE &&
+         SILC_OBJ_INL_TYPE  != SILC_OBJ_BREF_TYPE &&
+         SILC_OBJ_CONS_TYPE != SILC_OBJ_OREF_TYPE &&
+         SILC_OBJ_CONS_TYPE != SILC_OBJ_BREF_TYPE &&
+         SILC_OBJ_OREF_TYPE != SILC_OBJ_BREF_TYPE);
 END_TEST_METHOD()
 
 BEGIN_TEST_METHOD(test_sym_create)

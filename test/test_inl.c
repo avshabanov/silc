@@ -1,6 +1,34 @@
 #include "test.h"
 #include "silc.h"
 
+
+BEGIN_TEST_METHOD(test_inline_object_subtype)
+  /* make sure types are all different */
+  assert(SILC_OBJ_INL_SUBTYPE_NIL  != SILC_OBJ_INL_SUBTYPE_BOOL &&
+         SILC_OBJ_INL_SUBTYPE_NIL  != SILC_OBJ_INL_SUBTYPE_INT &&
+         SILC_OBJ_INL_SUBTYPE_NIL  != SILC_OBJ_INL_SUBTYPE_ERR &&
+         SILC_OBJ_INL_SUBTYPE_BOOL != SILC_OBJ_INL_SUBTYPE_INT &&
+         SILC_OBJ_INL_SUBTYPE_BOOL != SILC_OBJ_INL_SUBTYPE_ERR &&
+         SILC_OBJ_INL_SUBTYPE_INT  != SILC_OBJ_INL_SUBTYPE_ERR);
+
+  silc_obj o;
+
+  o = SILC_OBJ_NIL;
+  assert(SILC_GET_TYPE(o) == SILC_OBJ_INL_TYPE && SILC_GET_INL_SUBTYPE(o) == SILC_OBJ_INL_SUBTYPE_NIL);
+
+  o = SILC_OBJ_FALSE;
+  assert(SILC_GET_TYPE(o) == SILC_OBJ_INL_TYPE && SILC_GET_INL_SUBTYPE(o) == SILC_OBJ_INL_SUBTYPE_BOOL &&
+    0 == SILC_GET_INL_CONTENT(o));
+
+  o = SILC_OBJ_TRUE;
+  assert(SILC_GET_TYPE(o) == SILC_OBJ_INL_TYPE && SILC_GET_INL_SUBTYPE(o) == SILC_OBJ_INL_SUBTYPE_BOOL &&
+    1 == SILC_GET_INL_CONTENT(o));
+
+  o = SILC_OBJ_ZERO;
+  assert(SILC_GET_TYPE(o) == SILC_OBJ_INL_TYPE && SILC_GET_INL_SUBTYPE(o) == SILC_OBJ_INL_SUBTYPE_INT &&
+    0 == SILC_GET_INL_CONTENT(o));
+END_TEST_METHOD()
+
 BEGIN_TEST_METHOD(test_nil_equivalence_to_zero)
   /* zero should also be equivalent to NIL */
   assert(0 == SILC_OBJ_NIL);
@@ -93,6 +121,7 @@ END_TEST_METHOD()
 /* Entry point */
 int main(int argc, char** argv) {
   TESTS_STARTED();
+  test_inline_object_subtype();
   test_nil_equivalence_to_zero();
   test_int_conversions();
   test_inline_errors();
