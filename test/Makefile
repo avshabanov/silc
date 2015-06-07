@@ -10,12 +10,12 @@ LFLAGS += ../src/silc/target/silc.a
 # Targets
 
 all: compile
-	target/test_gc && target/test_inl && target/test_print && target/test_sym && target/test_read
+	target/test_inl && target/test_gc && target/test_obj && target/test_print && target/test_read
 
 run_gc_tests: compile
 	target/test_gc
 
-compile: target/test_gc target/test_inl target/test_print target/test_sym target/test_read
+compile: target/test_gc target/test_inl target/test_print target/test_obj target/test_read
 
 # Test Inline Objects
 
@@ -36,11 +36,11 @@ $(TO)/test_print.o: target test_print.c test.h
 
 # Test Symbols
 
-target/test_sym: $(TO)/test_sym.o
-	$(LINKER) -o target/test_sym $(TO)/test_sym.o $(LFLAGS)
+target/test_obj: $(TO)/test_obj.o
+	$(LINKER) -o target/test_obj $(TO)/test_obj.o $(LFLAGS)
 
-$(TO)/test_sym.o: target test_sym.c test.h
-	$(CC) $(CFLAGS) -c test_sym.c -o $(TO)/test_sym.o
+$(TO)/test_obj.o: target test_obj.c test.h
+	$(CC) $(CFLAGS) -c test_obj.c -o $(TO)/test_obj.o
 
 
 # Test GC

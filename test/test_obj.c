@@ -3,6 +3,15 @@
 
 #include "silc.h"
 
+BEGIN_TEST_METHOD(test_object_type)
+  struct silc_ctx_t * c = silc_new_context();
+  silc_obj o;
+
+  o = SILC_OBJ_NIL;
+
+  silc_free_context(c);
+END_TEST_METHOD()
+
 BEGIN_TEST_METHOD(test_sym_create)
   struct silc_ctx_t * c = silc_new_context();
 
@@ -62,6 +71,7 @@ END_TEST_METHOD()
 
 int main(int argc, char** argv) {
   TESTS_STARTED();
+  test_object_type();
   test_sym_create();
   TESTS_SUCCEEDED();
   return 0;

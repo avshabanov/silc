@@ -153,8 +153,8 @@ silc_obj silc_eq(struct silc_ctx_t* c, silc_obj lhs, silc_obj rhs) {
     return SILC_OBJ_TRUE;
   }
 
-  int type = (lhs & SILC_OBJ_TYPE_MASK);
-  if ((rhs & SILC_OBJ_TYPE_MASK) != type) {
+  int type = SILC_GET_TYPE(lhs);
+  if (SILC_GET_TYPE(rhs) != type) {
     /* different types */
     return SILC_OBJ_FALSE;
   }
@@ -384,7 +384,7 @@ silc_obj silc_cons(struct silc_ctx_t* c, silc_obj car, silc_obj cdr) {
 
 static inline silc_obj get_cons_cell(struct silc_ctx_t* c, silc_obj cons, int pos) {
   silc_obj result;
-  if ((cons & SILC_OBJ_TYPE_MASK) == SILC_OBJ_CONS_TYPE) {
+  if (SILC_GET_TYPE(cons) == SILC_OBJ_CONS_TYPE) {
     silc_obj* contents = silc_parse_cons(c->mem, cons);
     result = contents[pos];
   } else {

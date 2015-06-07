@@ -171,7 +171,7 @@ static inline int silc_parse_ref(struct silc_mem_t* mem,
   char* pch = NULL;
   silc_obj* po = NULL;
 
-  switch (obj & SILC_OBJ_TYPE_MASK) {
+  switch (SILC_GET_TYPE(obj)) {
     case SILC_OBJ_CONS_TYPE:
       po = silc_internal_get_contents(mem, obj);
       *content_len = 2;

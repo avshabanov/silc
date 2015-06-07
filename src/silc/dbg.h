@@ -53,7 +53,7 @@ static inline void dbg_silc_dump_gc_stats(struct silc_mem_t* mem, FILE* out) {
       continue;
     }
     int obj_pos = (int) (fpos >> SILC_INTERNAL_POS_SHIFT);
-    int type = fpos & SILC_OBJ_TYPE_MASK;
+    int type = SILC_GET_TYPE(fpos);
     fprintf(out, ";; [DBG] heap_pos[%d]=0x%08X, obj_index=%d, gc_mark=%s, type=%d\n",
       i,
       fpos,

@@ -43,7 +43,7 @@ static silc_obj * get_contents_and_mark(struct silc_mem_t * mem, silc_obj obj) {
 static void gc_mark(struct silc_mem_t * mem, silc_obj v) {
   silc_obj * t;
 
-  switch (v & SILC_OBJ_TYPE_MASK) {
+  switch (SILC_GET_TYPE(v)) {
     case SILC_OBJ_CONS_TYPE:
       t = get_contents_and_mark(mem, v);
       if (t == NULL) {

@@ -31,7 +31,7 @@ silc_obj silc_internal_fn_inc(struct silc_fn_t* f) {
 
   silc_obj arg = arg_peek(f->ctx, 0);
 
-  if (((arg & SILC_OBJ_TYPE_MASK) == SILC_OBJ_INL_TYPE) &&
+  if ((SILC_GET_TYPE(arg) == SILC_OBJ_INL_TYPE) &&
       (((arg >> SILC_OBJ_TYPE_SHIFT) & SILC_OBJ_INL_SUBTYPE_MASK) == SILC_OBJ_INL_SUBTYPE_INT)) {
     int val = silc_obj_to_int(arg) + 1;
     if (val > SILC_MAX_INT) {

@@ -73,7 +73,7 @@ static void print_cons(struct silc_ctx_t* c, silc_obj o, FILE* out) {
       break;
     }
 
-    if ((cdr & SILC_OBJ_TYPE_MASK) == SILC_OBJ_CONS_TYPE) {
+    if (SILC_GET_TYPE(cdr) == SILC_OBJ_CONS_TYPE) {
       fputc(' ', out);
       continue;
     }

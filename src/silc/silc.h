@@ -42,6 +42,8 @@ struct silc_ctx_t;
 #define SILC_OBJ_TYPE_SHIFT           (3)
 #define SILC_OBJ_TYPE_MASK            ((1 << SILC_OBJ_TYPE_SHIFT) - 1)
 
+#define SILC_GET_TYPE(o)              ((o) & SILC_OBJ_TYPE_MASK)
+
 /**
  * Count of bits per object content excluding type bits.
  * General object layout assumed to be as follows: [{..generic content..}{type bits}]
@@ -152,7 +154,7 @@ static inline silc_obj silc_err_from_code(int err_code) {
  * Returns negative value if this object does not represent an error.
  */
 static inline int silc_try_get_err_code(silc_obj obj) {
-  if (((obj & SILC_OBJ_TYPE_MASK) != SILC_OBJ_INL_TYPE) ||
+  if ((SILC_GET_TYPE(obj) != SILC_OBJ_INL_TYPE) ||
       (((obj >> SILC_OBJ_INL_SUBTYPE_MASK) & SILC_OBJ_INL_SUBTYPE_MASK) != SILC_OBJ_INL_SUBTYPE_ERR)) {
     return -1;
   }
@@ -273,7 +275,7 @@ static inline int silc_obj_to_int(silc_obj o) {
   int val = 0;
 
   /* should be of inline type */
-  assert((o & SILC_OBJ_TYPE_MASK) == SILC_OBJ_INL_TYPE);
+  assert(SILC_GET_TYPE(o) == SILC_OBJ_INL_TYPE);
 
   /* should be of int subtype */
   assert(((o >> SILC_OBJ_TYPE_SHIFT) & SILC_OBJ_INL_SUBTYPE_MASK) == SILC_OBJ_INL_SUBTYPE_INT);
