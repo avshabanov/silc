@@ -42,6 +42,15 @@ struct silc_ctx_t;
 #define SILC_OBJ_TYPE_SHIFT           (3)
 #define SILC_OBJ_TYPE_MASK            ((1 << SILC_OBJ_TYPE_SHIFT) - 1)
 
+/**
+ * Returns one of the type code associated with an object:
+ * <ul>
+ *  <li>SILC_OBJ_INL_TYPE</li>
+ *  <li>SILC_OBJ_CONS_TYPE</li>
+ *  <li>SILC_OBJ_OREF_TYPE</li>
+ *  <li>SILC_OBJ_BREF_TYPE</li>
+ * </ul>
+ */
 #define SILC_GET_TYPE(o)              ((o) & SILC_OBJ_TYPE_MASK)
 
 /**
@@ -51,12 +60,6 @@ struct silc_ctx_t;
 #define SILC_OBJ_CONTENT_BITS         ((sizeof(silc_obj) * CHAR_BIT) - SILC_OBJ_TYPE_SHIFT)
 
 
-
-/**
- * Extracts lval type (first two bits)
- */
-#define SILC_OBJ_GET_TYPE(l) ((l) & SILC_OBJ_TYPE_MASK)
-
 /**
  * Simple objects written as is into the lval.
  * Subtypes: boolean, small signed int
@@ -65,6 +68,20 @@ struct silc_ctx_t;
 
 #define SILC_OBJ_INL_SUBTYPE_MASK     (3)
 #define SILC_OBJ_INL_SUBTYPE_SHIFT    (2)
+
+/**
+ * Returns inline object subtype.
+ * Before calling this macro, the caller should make sure that object is of inline subtype.
+ *
+ * This macro returns one of the inline subtypes:
+ * <ul>
+ *  <li>SILC_OBJ_INL_SUBTYPE_NIL</li>
+ *  <li>SILC_OBJ_INL_SUBTYPE_BOOL</li>
+ *  <li>SILC_OBJ_INL_SUBTYPE_INT</li>
+ *  <li>SILC_OBJ_INL_SUBTYPE_ERR</li>
+ * </ul>
+ */
+#define SILC_GET_INL_SUBTYPE(inl_o)   (((inl_o) >> SILC_OBJ_TYPE_SHIFT) & SILC_OBJ_INL_SUBTYPE_MASK)
 
 /**
  * Total count of bits in the inline object content.
@@ -154,8 +171,7 @@ static inline silc_obj silc_err_from_code(int err_code) {
  * Returns negative value if this object does not represent an error.
  */
 static inline int silc_try_get_err_code(silc_obj obj) {
-  if ((SILC_GET_TYPE(obj) != SILC_OBJ_INL_TYPE) ||
-      (((obj >> SILC_OBJ_INL_SUBTYPE_MASK) & SILC_OBJ_INL_SUBTYPE_MASK) != SILC_OBJ_INL_SUBTYPE_ERR)) {
+  if ((SILC_GET_TYPE(obj) != SILC_OBJ_INL_TYPE) || (SILC_GET_INL_SUBTYPE(obj) != SILC_OBJ_INL_SUBTYPE_ERR)) {
     return -1;
   }
 
@@ -272,15 +288,9 @@ static inline silc_obj silc_int_to_obj(int val) {
 }
 
 static inline int silc_obj_to_int(silc_obj o) {
-  int val = 0;
+  assert((SILC_GET_TYPE(o) == SILC_OBJ_INL_TYPE) && (SILC_GET_INL_SUBTYPE(o) == SILC_OBJ_INL_SUBTYPE_INT));
 
-  /* should be of inline type */
-  assert(SILC_GET_TYPE(o) == SILC_OBJ_INL_TYPE);
-
-  /* should be of int subtype */
-  assert(((o >> SILC_OBJ_TYPE_SHIFT) & SILC_OBJ_INL_SUBTYPE_MASK) == SILC_OBJ_INL_SUBTYPE_INT);
-
-  val = (int) (o >> (SILC_OBJ_TYPE_SHIFT + SILC_OBJ_INL_SUBTYPE_SHIFT));
+  int val = (int) (o >> (SILC_OBJ_TYPE_SHIFT + SILC_OBJ_INL_SUBTYPE_SHIFT));
   if (val & SILC_INT_SIGN_BIT) {
     /* negative */
     val = val & (~SILC_INT_SIGN_BIT);

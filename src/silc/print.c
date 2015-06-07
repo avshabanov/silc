@@ -21,7 +21,7 @@ static void print_unknown(silc_obj o, FILE* out) {
 }
 
 static void print_inl(silc_obj o, FILE* out) {
-  switch ((o >> SILC_OBJ_TYPE_SHIFT) & SILC_OBJ_INL_SUBTYPE_MASK) {
+  switch (SILC_GET_INL_SUBTYPE(o)) {
     case SILC_OBJ_INL_SUBTYPE_NIL:
       fputs("nil", out);
       break;
