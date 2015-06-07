@@ -26,8 +26,9 @@ static silc_obj read_list(struct silc_ctx_t * c, FILE * f);
 /* Implementation */
 
 static inline bool is_lisp_char(int c) {
-  if ((c >= 'a' && c < 'z') || (c >= 'A' && c < 'Z') || (c >= '0' && c < '9') ||
-      (c == '*') || (c == '&') || (c == '-') || (c == '+') || (c == '*')) {
+  if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') ||
+      (c == '&') || (c == '*') || (c == '-') || (c == '+') || (c == '/') || (c == '=') ||
+      (c == '!') || (c == '#') || (c == '$')) {
     return true;
   }
   return false;
@@ -108,8 +109,8 @@ static silc_obj read_number_or_symbol(struct silc_ctx_t * c, FILE * f) {
       ungetc(ch, f);
       if (!first_char_met) {
         /* special case (minus sign) */
-        char minus[] = { '-' };
-        return silc_sym_from_buf(c, minus, 1);
+        char minus = '-';
+        return silc_sym_from_buf(c, &minus, 1);
       }
       break; /* end of number */
     }

@@ -1,8 +1,8 @@
 #include "core.h"
 #include "builtins.h"
 
-#define TEST_BEFORE(test_id)    open_tmpfile()
-#define TEST_AFTER(test_id)     close_tmpfile()
+#define TEST_BEFORE(test_id)    open_tmpfiles()
+#define TEST_AFTER(test_id)     close_tmpfiles()
 #include "test.h"
 
 #include "test_helpers.h"
@@ -15,15 +15,21 @@ static void write_and_rewind(FILE* f, const char* str) {
 
 
 static FILE* out = NULL;
+static FILE* in = NULL;
 
-static void open_tmpfile() {
+static void open_tmpfiles() {
   out = tmpfile();
+  in = tmpfile();
 }
 
-static void close_tmpfile() {
+static void close_tmpfiles() {
   if (out != NULL) {
     fclose(out);
     out = NULL;
+  }
+  if (in != NULL) {
+    fclose(in);
+    in = NULL;
   }
 }
 
@@ -54,13 +60,18 @@ BEGIN_TEST_METHOD(test_read_cons_single)
   assert(silc_int_to_obj(1) == car);
   assert(SILC_OBJ_NIL == cdr);
 
+  /* Check representation */
+  silc_print(c, o, in);
+  READ_BUF(in, buf);
+  assert(0 == strcmp(buf, "(1)"));
+
   silc_free_context(c);
 END_TEST_METHOD()
 
 BEGIN_TEST_METHOD(test_read_cons_multiple)
   /* Given: */
   struct silc_ctx_t* c = silc_new_context();
-  write_and_rewind(out, "(1 2 3)");
+  write_and_rewind(out, "(1 0 -1)");
 
   /* When: */
   silc_obj o = not_an_error(silc_read(c, out));
@@ -70,6 +81,11 @@ BEGIN_TEST_METHOD(test_read_cons_multiple)
   silc_obj cdr = silc_cdr(c, o);
   assert(silc_int_to_obj(1) == car);
   assert(SILC_OBJ_NIL != cdr);
+
+  /* Check representation */
+  silc_print(c, o, in);
+  READ_BUF(in, buf);
+  assert(0 == strcmp(buf, "(1 0 -1)"));
 
   silc_free_context(c);
 END_TEST_METHOD()
@@ -87,6 +103,11 @@ BEGIN_TEST_METHOD(test_read_cons_nested)
   silc_obj cdr = silc_cdr(c, o);
   assert(silc_int_to_obj(1) == car);
   assert(SILC_OBJ_NIL != cdr);
+
+  /* Check representation */
+  silc_print(c, o, in);
+  READ_BUF(in, buf);
+  assert(0 == strcmp(buf, "(1 (2 3 (4)))"));
 
   silc_free_context(c);
 END_TEST_METHOD()
@@ -130,6 +151,40 @@ BEGIN_TEST_METHOD(test_read_special_nil)
   silc_free_context(c);
 END_TEST_METHOD()
 
+
+static void helper_test_read_symbol(const char* symbol_str) {
+  /* Given: */
+  struct silc_ctx_t* c = silc_new_context();
+  write_and_rewind(out, symbol_str);
+
+  /* When: */
+  silc_obj o = not_an_error(silc_read(c, out));
+
+  /* Then: */
+  silc_obj str = SILC_OBJ_NIL;
+  silc_obj assoc = silc_get_sym_info(c, o, &str);
+  assert(SILC_ERR_UNRESOLVED_SYMBOL == silc_try_get_err_code(assoc));
+  assert_same_str(c, str, symbol_str, strlen(symbol_str));
+
+  silc_free_context(c);
+}
+
+BEGIN_TEST_METHOD(test_read_single_char_symbol)
+  helper_test_read_symbol("s");
+END_TEST_METHOD()
+
+BEGIN_TEST_METHOD(test_read_multichar_symbol_with_dashes)
+  helper_test_read_symbol("aaa-bb-c");
+END_TEST_METHOD()
+
+BEGIN_TEST_METHOD(test_read_multichar_alphanum_symbol)
+  helper_test_read_symbol("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789*&+-");
+END_TEST_METHOD()
+
+BEGIN_TEST_METHOD(test_read_minus_sign)
+  helper_test_read_symbol("-");
+END_TEST_METHOD()
+
 int main(int argc, char** argv) {
   TESTS_STARTED();
   test_read_number();
@@ -139,7 +194,10 @@ int main(int argc, char** argv) {
   test_read_special_true();
   test_read_special_false();
   test_read_special_nil();
-  //test_read_list_of_specials();
+  test_read_single_char_symbol();
+  test_read_multichar_symbol_with_dashes();
+  test_read_multichar_alphanum_symbol();
+  test_read_minus_sign();
   TESTS_SUCCEEDED();
   return 0;
 }

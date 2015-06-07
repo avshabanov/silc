@@ -7,23 +7,7 @@
 
 #include "test_helpers.h"
 
-/* reader helpers */
-
-#define READ_BUF(f, buf) \
-  char buf[1024] = {0}; \
-  read_buf(f, buf, sizeof(buf) - 1)
-
-static inline size_t read_buf(FILE* f, char* buf, size_t bytes) {
-  fflush(f);
-  fseek(f, 0, SEEK_SET);
-
-  size_t read = fread(buf, 1, bytes, f);
-  buf[read] = 0;
-
-  return read;
-}
-
-
+/* Helpers */
 
 static FILE* out = NULL;
 

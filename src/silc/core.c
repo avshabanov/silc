@@ -326,7 +326,7 @@ silc_obj silc_sym_from_buf(struct silc_ctx_t* c, const char* buf, int size) {
   silc_obj contents[] = {
     hash_code_obj,              /* [0] symbol string's hash code */
     silc_str(c, buf, size),     /* [1] symbol string */
-    SILC_ERR_UNRESOLVED_SYMBOL  /* [2] assoc (initially unresolved) */
+    silc_err_from_code(SILC_ERR_UNRESOLVED_SYMBOL) /* [2] assoc (initially unresolved) */
   };
   silc_obj result = silc_alloc_obj(c->mem, 3, contents, SILC_OBJ_OREF_TYPE, SILC_OREF_SYMBOL_SUBTYPE);
 

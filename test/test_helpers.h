@@ -27,5 +27,21 @@ static inline silc_obj not_an_error(silc_obj o) {
   fprintf(stderr, "Returned object is an error, code=%d, message=%s\n", code, silc_err_code_to_str(code));
   abort();
 
-  return o; /* should not come here */
+  return SILC_OBJ_NIL; /* should not come here */
+}
+
+/* reader helpers */
+
+#define READ_BUF(f, buf) \
+  char buf[1024] = {0}; \
+  read_buf(f, buf, sizeof(buf) - 1)
+
+static inline size_t read_buf(FILE* f, char* buf, size_t bytes) {
+  fflush(f);
+  fseek(f, 0, SEEK_SET);
+
+  size_t read = fread(buf, 1, bytes, f);
+  buf[read] = 0;
+
+  return read;
 }
