@@ -34,12 +34,12 @@ BEGIN_TEST_METHOD(test_sym_create)
     /* get symbol information */
     silc_obj str = SILC_OBJ_NIL;
     silc_obj assoc = silc_get_sym_info(c, sym, &str);
-    assert(SILC_OBJ_NIL == assoc);
+    assert(SILC_ERR_UNRESOLVED_SYMBOL == assoc);
     assert_same_str(c, str, buf, sz);
 
     /* set new association */
     assoc = silc_set_sym_assoc(c, sym, silc_int_to_obj(n));
-    assert(SILC_OBJ_NIL == assoc); /* old assoc should be null */
+    assert(SILC_ERR_UNRESOLVED_SYMBOL == assoc); /* verify initial assoc */
   }
 
   /* test new assocs */

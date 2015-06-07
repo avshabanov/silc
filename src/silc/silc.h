@@ -98,6 +98,46 @@ struct silc_ctx_t;
 /* Symbol representation is too big */
 #define SILC_ERR_SYMBOL_TOO_BIG       (452)
 
+/* Evaluation errors */
+
+/* Symbol has not been associated with a value */
+#define SILC_ERR_UNRESOLVED_SYMBOL    (470)
+
+/**
+ * Converts error code to string.
+ */
+static inline const char* silc_err_code_to_str(int code) {
+  assert(code > 0);
+  switch (code) {
+    case SILC_ERR_INTERNAL:
+      return "internal error";
+
+    case SILC_ERR_STACK_ACCESS:
+      return "stack access error";
+
+    case SILC_ERR_INVALID_ARGS:
+      return "invalid arguments";
+
+    case SILC_ERR_VALUE_OUT_OF_RANGE:
+      return "value is out of range";
+
+    case SILC_ERR_UNEXPECTED_EOF:
+      return "unexpected end of file";
+
+    case SILC_ERR_UNEXPECTED_CHARACTER:
+      return "unexpected character";
+
+    case SILC_ERR_SYMBOL_TOO_BIG:
+      return "symbol string is too big";
+
+    case SILC_ERR_UNRESOLVED_SYMBOL:
+      return "unresolved symbol";
+
+    default:
+      return "unknown error";
+  }
+}
+
 
 #define SILC_MAX_ERR_CODE             ((1<<(SILC_OBJ_INL_CONTENT_BITS)) - 1)
 

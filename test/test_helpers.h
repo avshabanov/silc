@@ -1,7 +1,6 @@
 #pragma once
 
 #include "silc.h"
-#include "err.h"
 #include <assert.h>
 #include <string.h>
 
@@ -25,7 +24,7 @@ static inline silc_obj not_an_error(silc_obj o) {
     return o; /* ok */
   }
 
-  fprintf(stderr, "Returned object is an error, code=%d, message=%s\n", code, get_error_message(code));
+  fprintf(stderr, "Returned object is an error, code=%d, message=%s\n", code, silc_err_code_to_str(code));
   abort();
 
   return o; /* should not come here */

@@ -19,6 +19,7 @@
 #include <string.h>
 
 #include "mem.h"
+#include "builtins.h"
 
 /* Forward declarations */
 
@@ -108,6 +109,10 @@ static void init_globals(struct silc_ctx_t* c) {
   c->root_cons = silc_cons(c, c->sym_hash_table, SILC_OBJ_NIL);
 }
 
+static void init_builtins(struct silc_ctx_t* c) {
+  /**/
+}
+
 struct silc_ctx_t * silc_new_context() {
   struct silc_ctx_t* c = xmallocz(sizeof(struct silc_ctx_t));
 
@@ -125,6 +130,7 @@ struct silc_ctx_t * silc_new_context() {
 
   /* globals */
   init_globals(c);
+  init_builtins(c);
 
   return c;
 }
@@ -318,9 +324,9 @@ silc_obj silc_sym_from_buf(struct silc_ctx_t* c, const char* buf, int size) {
 
   /* create new entry */
   silc_obj contents[] = {
-    hash_code_obj,            /* [0] symbol string's hash code */
-    silc_str(c, buf, size),   /* [1] symbol string */
-    SILC_OBJ_NIL              /* [2] assoc */
+    hash_code_obj,              /* [0] symbol string's hash code */
+    silc_str(c, buf, size),     /* [1] symbol string */
+    SILC_ERR_UNRESOLVED_SYMBOL  /* [2] assoc (initially unresolved) */
   };
   silc_obj result = silc_alloc_obj(c->mem, 3, contents, SILC_OBJ_OREF_TYPE, SILC_OREF_SYMBOL_SUBTYPE);
 
