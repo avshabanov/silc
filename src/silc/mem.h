@@ -115,7 +115,7 @@ void silc_calc_mem_stats(struct silc_mem_t* mem, struct silc_mem_stats_t* stats)
  * @param mem             Pointer to memory context
  * @param content_length  Allocated object content length; should always be 2 for CONS objects
  * @param content         Pointer to silc_obj for CONS and OREF, pointer to char for BREF objects
- * @param type            Object type, can be SILC_OBJ_OREF_TYPE, SILC_OBJ_CONS_TYPE and SILC_OBJ_BREF_TYPE
+ * @param type            Object type, can be SILC_TYPE_OREF, SILC_TYPE_CONS and SILC_TYPE_BREF
  * @param subtype         Object subtype. Should always be SILC_CONS_SUBTYPE for CONS objects
  */
 silc_obj silc_alloc_obj(struct silc_mem_t* mem,
@@ -128,18 +128,18 @@ silc_obj silc_alloc_obj(struct silc_mem_t* mem,
 /* General purpose memory allocators */
 
 /* Position layout: [...index...{gc_bit}{type_bits}] */
-#define SILC_INTERNAL_POS_GC_BIT      (1 << SILC_OBJ_TYPE_SHIFT)
-#define SILC_INTERNAL_POS_SHIFT       (SILC_OBJ_TYPE_SHIFT + 1)
+#define SILC_INTERNAL_POS_GC_BIT      (1 << SILC_INT_TYPE_SHIFT)
+#define SILC_INT_POS_SHIFT       (SILC_INT_TYPE_SHIFT + 1)
 #define SILC_INTERNAL_FREE_POS        (-1)
 
 static inline int silc_get_pos_index(struct silc_mem_t* mem, silc_obj obj) {
-  int index_offset = (int) (obj >> SILC_OBJ_TYPE_SHIFT);
+  int index_offset = (int) (obj >> SILC_INT_TYPE_SHIFT);
   assert(index_offset >= 0 && index_offset < mem->pos_count);
   return mem->last_pos_index - index_offset;
 }
 
 static inline silc_obj* silc_internal_get_contents(struct silc_mem_t* mem, silc_obj obj) {
-  int pos = (int) (mem->buf[silc_get_pos_index(mem, obj)] >> SILC_INTERNAL_POS_SHIFT);
+  int pos = (int) (mem->buf[silc_get_pos_index(mem, obj)] >> SILC_INT_POS_SHIFT);
   assert(pos >= 0 && pos < mem->avail_index);
   return mem->buf + pos;
 }
@@ -172,17 +172,17 @@ static inline int silc_parse_ref(struct silc_mem_t* mem,
   silc_obj* po = NULL;
 
   switch (SILC_GET_TYPE(obj)) {
-    case SILC_OBJ_CONS_TYPE:
+    case SILC_TYPE_CONS:
       po = silc_internal_get_contents(mem, obj);
       *content_len = 2;
       subtype = SILC_CONS_SUBTYPE;
       break;
 
-    case SILC_OBJ_OREF_TYPE:
+    case SILC_TYPE_OREF:
       po = silc_internal_get_ref_data(mem, obj, &subtype, content_len) + 2;
       break;
 
-    case SILC_OBJ_BREF_TYPE:
+    case SILC_TYPE_BREF:
       pch = (char*) (silc_internal_get_ref_data(mem, obj, &subtype, content_len) + 2);
       break;
   }

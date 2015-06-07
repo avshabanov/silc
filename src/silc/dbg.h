@@ -23,9 +23,9 @@ static inline void dbg_silc_dump_heap_pos(struct silc_mem_t* mem) {
     fprintf(stderr, "\t[DBG] heap_pos[%d]=0x%08X (index=%d, gc_mark=%s, type=%d)\n",
       i,
       fpos,
-      (int) (fpos >> SILC_INTERNAL_POS_SHIFT),
+      (int) (fpos >> SILC_INT_POS_SHIFT),
       ((fpos & SILC_INTERNAL_POS_GC_BIT) ? "yes" : "no"),
-      fpos & SILC_OBJ_TYPE_MASK);
+      fpos & SILC_INT_TYPE_MASK);
   }
 }
 
@@ -52,7 +52,7 @@ static inline void dbg_silc_dump_gc_stats(struct silc_mem_t* mem, FILE* out) {
       fprintf(out, ";; [DBG] heap_pos[%d]=FREE\n", i);
       continue;
     }
-    int obj_pos = (int) (fpos >> SILC_INTERNAL_POS_SHIFT);
+    int obj_pos = (int) (fpos >> SILC_INT_POS_SHIFT);
     int type = SILC_GET_TYPE(fpos);
     fprintf(out, ";; [DBG] heap_pos[%d]=0x%08X, obj_index=%d, gc_mark=%s, type=%d\n",
       i,
@@ -65,11 +65,11 @@ static inline void dbg_silc_dump_gc_stats(struct silc_mem_t* mem, FILE* out) {
     silc_obj* o = mem->buf + obj_pos;
     int len;
     switch (type) {
-    case SILC_OBJ_CONS_TYPE:
+    case SILC_TYPE_CONS:
       fprintf(out, "%X %X", o[0], o[1]);
       break;
 
-    case SILC_OBJ_OREF_TYPE:
+    case SILC_TYPE_OREF:
       len = silc_obj_to_int(o[1]);
       fprintf(out, "oref subtype=%d len=%d |", silc_obj_to_int(o[0]), len);
       for (int j = 0; j < len; ++j) {
@@ -77,7 +77,7 @@ static inline void dbg_silc_dump_gc_stats(struct silc_mem_t* mem, FILE* out) {
       }
       break;
 
-    case SILC_OBJ_BREF_TYPE:
+    case SILC_TYPE_BREF:
       len = silc_obj_to_int(o[1]);
       fprintf(out, "bref subtype=%d len=%d |", silc_obj_to_int(o[0]), len);
       for (int j = 0; j < len; ++j) {

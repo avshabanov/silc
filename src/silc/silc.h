@@ -29,45 +29,45 @@ struct silc_ctx_t;
 
 /**
  * Counts of bits, used to represent object type information.
- * See also SILC_OBJ_INL_CONTENT_BITS
+ * See also SILC_INL_INL_CONTENT_BITS
  *
  * Primary types are:
  * <ul>
- *  <li>SILC_OBJ_INL_TYPE</li>
- *  <li>SILC_OBJ_CONS_TYPE</li>
- *  <li>SILC_OBJ_OREF_TYPE</li>
- *  <li>SILC_OBJ_BREF_TYPE</li>
+ *  <li>SILC_TYPE_INL</li>
+ *  <li>SILC_TYPE_CONS</li>
+ *  <li>SILC_TYPE_OREF</li>
+ *  <li>SILC_TYPE_BREF</li>
  * </ul>
  */
-#define SILC_OBJ_TYPE_SHIFT           (3)
-#define SILC_OBJ_TYPE_MASK            ((1 << SILC_OBJ_TYPE_SHIFT) - 1)
+#define SILC_INT_TYPE_SHIFT           (3)
+#define SILC_INT_TYPE_MASK            ((1 << SILC_INT_TYPE_SHIFT) - 1)
 
 /**
  * Returns one of the type code associated with an object:
  * <ul>
- *  <li>SILC_OBJ_INL_TYPE</li>
- *  <li>SILC_OBJ_CONS_TYPE</li>
- *  <li>SILC_OBJ_OREF_TYPE</li>
- *  <li>SILC_OBJ_BREF_TYPE</li>
+ *  <li>SILC_TYPE_INL</li>
+ *  <li>SILC_TYPE_CONS</li>
+ *  <li>SILC_TYPE_OREF</li>
+ *  <li>SILC_TYPE_BREF</li>
  * </ul>
  */
-#define SILC_GET_TYPE(o)              ((o) & SILC_OBJ_TYPE_MASK)
+#define SILC_GET_TYPE(o)              ((o) & SILC_INT_TYPE_MASK)
 
 /**
  * Count of bits per object content excluding type bits.
  * General object layout assumed to be as follows: [{..generic content..}{type bits}]
  */
-#define SILC_OBJ_CONTENT_BITS         ((sizeof(silc_obj) * CHAR_BIT) - SILC_OBJ_TYPE_SHIFT)
+#define SILC_INT_CONTENT_BIT          ((sizeof(silc_obj) * CHAR_BIT) - SILC_INT_TYPE_SHIFT)
 
 
 /**
  * Simple objects written as is into the lval.
  * Subtypes: boolean, small signed int
  */
-#define SILC_OBJ_INL_TYPE             (0)
+#define SILC_TYPE_INL                 (0)
 
-#define SILC_OBJ_INL_SUBTYPE_SHIFT    (2)
-#define SILC_OBJ_INL_SUBTYPE_MASK     ((1 << SILC_OBJ_INL_SUBTYPE_SHIFT) - 1)
+#define SILC_INT_INL_SUBTYPE_SHIFT    (2)
+#define SILC_INT_INL_SUBTYPE_MASK     ((1 << SILC_INT_INL_SUBTYPE_SHIFT) - 1)
 
 /**
  * Returns inline object subtype.
@@ -75,33 +75,32 @@ struct silc_ctx_t;
  *
  * This macro returns one of the inline subtypes:
  * <ul>
- *  <li>SILC_OBJ_INL_SUBTYPE_NIL</li>
- *  <li>SILC_OBJ_INL_SUBTYPE_BOOL</li>
- *  <li>SILC_OBJ_INL_SUBTYPE_INT</li>
- *  <li>SILC_OBJ_INL_SUBTYPE_ERR</li>
+ *  <li>SILC_INL_SUBTYPE_NIL</li>
+ *  <li>SILC_INL_SUBTYPE_BOOL</li>
+ *  <li>SILC_INL_SUBTYPE_INT</li>
+ *  <li>SILC_INL_SUBTYPE_ERR</li>
  * </ul>
  */
-#define SILC_GET_INL_SUBTYPE(inl_o)   (((inl_o) >> SILC_OBJ_TYPE_SHIFT) & SILC_OBJ_INL_SUBTYPE_MASK)
+#define SILC_GET_INL_SUBTYPE(inl_o)   (((inl_o) >> SILC_INT_TYPE_SHIFT) & SILC_INT_INL_SUBTYPE_MASK)
 
 /** Returns content of the inline object stripped from type and subtype information */
-#define SILC_GET_INL_CONTENT(content) ((content) >> (SILC_OBJ_TYPE_SHIFT + SILC_OBJ_INL_SUBTYPE_SHIFT))
+#define SILC_GET_INL_CONTENT(content) ((content) >> (SILC_INT_TYPE_SHIFT + SILC_INT_INL_SUBTYPE_SHIFT))
 
 /** Creates inline object along with the type and subtype information */
-#define SILC_MAKE_INL_OBJECT(content, subtype)  (SILC_OBJ_INL_TYPE | \
-                                                ((subtype) << SILC_OBJ_TYPE_SHIFT) | \
-                                                ((content) << (SILC_OBJ_TYPE_SHIFT + SILC_OBJ_INL_SUBTYPE_SHIFT)))
+#define SILC_MAKE_INL_OBJECT(content, subtype)  (SILC_TYPE_INL | \
+                                                ((subtype) << SILC_INT_TYPE_SHIFT) | \
+                                                ((content) << (SILC_INT_TYPE_SHIFT + SILC_INT_INL_SUBTYPE_SHIFT)))
 
 /**
  * Total count of bits in the inline object content.
  * Inline object layout: [{..inline object content..}{subtype bits}{type bits}]
  */
-#define SILC_OBJ_INL_CONTENT_BITS     (SILC_OBJ_CONTENT_BITS - SILC_OBJ_INL_SUBTYPE_SHIFT)
+#define SILC_INL_INL_CONTENT_BITS     (SILC_INT_CONTENT_BIT - SILC_INT_INL_SUBTYPE_SHIFT)
 
-#define SILC_OBJ_INL_SUBTYPE_NIL      (0)
-#define SILC_OBJ_INL_SUBTYPE_BOOL     (1)
-#define SILC_OBJ_INL_SUBTYPE_INT      (2)
-/* Inline error */
-#define SILC_OBJ_INL_SUBTYPE_ERR      (3)
+#define SILC_INL_SUBTYPE_NIL          (0)
+#define SILC_INL_SUBTYPE_BOOL         (1)
+#define SILC_INL_SUBTYPE_INT          (2)
+#define SILC_INL_SUBTYPE_ERR          (3)
 
 /* Error codes */
 
@@ -166,11 +165,11 @@ static inline const char* silc_err_code_to_str(int code) {
 }
 
 
-#define SILC_MAX_ERR_CODE             ((1<<(SILC_OBJ_INL_CONTENT_BITS)) - 1)
+#define SILC_MAX_ERR_CODE             ((1<<(SILC_INL_INL_CONTENT_BITS)) - 1)
 
 static inline silc_obj silc_err_from_code(int err_code) {
   assert(err_code > 0 && err_code < SILC_MAX_ERR_CODE);
-  return SILC_MAKE_INL_OBJECT(err_code, SILC_OBJ_INL_SUBTYPE_ERR);
+  return SILC_MAKE_INL_OBJECT(err_code, SILC_INL_SUBTYPE_ERR);
 }
 
 /**
@@ -178,7 +177,7 @@ static inline silc_obj silc_err_from_code(int err_code) {
  * Returns negative value if this object does not represent an error.
  */
 static inline int silc_try_get_err_code(silc_obj obj) {
-  if ((SILC_GET_TYPE(obj) != SILC_OBJ_INL_TYPE) || (SILC_GET_INL_SUBTYPE(obj) != SILC_OBJ_INL_SUBTYPE_ERR)) {
+  if ((SILC_GET_TYPE(obj) != SILC_TYPE_INL) || (SILC_GET_INL_SUBTYPE(obj) != SILC_INL_SUBTYPE_ERR)) {
     return -1;
   }
 
@@ -198,12 +197,12 @@ static inline int silc_try_get_err_code(silc_obj obj) {
 /**
  * Represents cons cell.
  */
-#define SILC_OBJ_CONS_TYPE            (1)
+#define SILC_TYPE_CONS                (1)
 
 /**
  * Points to the sequence of objects (first element is a length (smallint), next one - type (smallint))
  */
-#define SILC_OBJ_OREF_TYPE            (2)
+#define SILC_TYPE_OREF                (2)
 
 #define SILC_OREF_SYMBOL_SUBTYPE      (10)
 #define SILC_OREF_HASHTABLE_SUBTYPE   (20)
@@ -211,7 +210,7 @@ static inline int silc_try_get_err_code(silc_obj obj) {
 /**
  * Contains length, then sequence of bytes.
  */
-#define SILC_OBJ_BREF_TYPE            (3)
+#define SILC_TYPE_BREF                (3)
 
 #define SILC_BREF_STR_SUBTYPE         (1000)
 
@@ -221,16 +220,16 @@ static inline int silc_try_get_err_code(silc_obj obj) {
 
 /* Base constants */
 
-#define SILC_OBJ_NIL                  SILC_MAKE_INL_OBJECT(0, SILC_OBJ_INL_SUBTYPE_NIL)
+#define SILC_OBJ_NIL                  SILC_MAKE_INL_OBJECT(0, SILC_INL_SUBTYPE_NIL)
 
 /* Inline false value */
-#define SILC_OBJ_FALSE                SILC_MAKE_INL_OBJECT(0, SILC_OBJ_INL_SUBTYPE_BOOL)
+#define SILC_OBJ_FALSE                SILC_MAKE_INL_OBJECT(0, SILC_INL_SUBTYPE_BOOL)
 
 /* Inline true value */
-#define SILC_OBJ_TRUE                 SILC_MAKE_INL_OBJECT(1, SILC_OBJ_INL_SUBTYPE_BOOL)
+#define SILC_OBJ_TRUE                 SILC_MAKE_INL_OBJECT(1, SILC_INL_SUBTYPE_BOOL)
 
 /* Zero integer */
-#define SILC_OBJ_ZERO                 SILC_MAKE_INL_OBJECT(0, SILC_OBJ_INL_SUBTYPE_INT)
+#define SILC_OBJ_ZERO                 SILC_MAKE_INL_OBJECT(0, SILC_INL_SUBTYPE_INT)
 
 
 
@@ -243,7 +242,7 @@ void silc_free_context(struct silc_ctx_t * c);
 /* Helper functions */
 
 /** Bit that designates sign in the inline int object (relative to object content) */
-#define SILC_INT_SIGN_BIT             (1<<(SILC_OBJ_INL_CONTENT_BITS - 1))
+#define SILC_INT_SIGN_BIT             (1<<(SILC_INL_INL_CONTENT_BITS - 1))
 #define SILC_MAX_INT                  (SILC_INT_SIGN_BIT - 1)
 
 /** Sign bit (must be the leftmost bit in an integer) */
@@ -277,14 +276,14 @@ static inline silc_obj silc_int_to_obj(int val) {
     obj |= SILC_INT_SIGN_BIT;
   }
 
-  obj = obj << (SILC_OBJ_INL_SUBTYPE_SHIFT + SILC_OBJ_TYPE_SHIFT);
-  obj |= SILC_OBJ_INL_TYPE | (SILC_OBJ_INL_SUBTYPE_INT << (SILC_OBJ_TYPE_SHIFT));
+  obj = obj << (SILC_INT_INL_SUBTYPE_SHIFT + SILC_INT_TYPE_SHIFT);
+  obj |= SILC_TYPE_INL | (SILC_INL_SUBTYPE_INT << (SILC_INT_TYPE_SHIFT));
 
   return obj;
 }
 
 static inline int silc_obj_to_int(silc_obj o) {
-  assert((SILC_GET_TYPE(o) == SILC_OBJ_INL_TYPE) && (SILC_GET_INL_SUBTYPE(o) == SILC_OBJ_INL_SUBTYPE_INT));
+  assert((SILC_GET_TYPE(o) == SILC_TYPE_INL) && (SILC_GET_INL_SUBTYPE(o) == SILC_INL_SUBTYPE_INT));
 
   int val = SILC_GET_INL_CONTENT(o);
   if (val & SILC_INT_SIGN_BIT) {

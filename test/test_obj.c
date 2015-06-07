@@ -4,12 +4,12 @@
 #include "silc.h"
 
 BEGIN_TEST_METHOD(test_object_type)
-  assert(SILC_OBJ_INL_TYPE  != SILC_OBJ_CONS_TYPE &&
-         SILC_OBJ_INL_TYPE  != SILC_OBJ_OREF_TYPE &&
-         SILC_OBJ_INL_TYPE  != SILC_OBJ_BREF_TYPE &&
-         SILC_OBJ_CONS_TYPE != SILC_OBJ_OREF_TYPE &&
-         SILC_OBJ_CONS_TYPE != SILC_OBJ_BREF_TYPE &&
-         SILC_OBJ_OREF_TYPE != SILC_OBJ_BREF_TYPE);
+  assert(SILC_TYPE_INL  != SILC_TYPE_CONS &&
+         SILC_TYPE_INL  != SILC_TYPE_OREF &&
+         SILC_TYPE_INL  != SILC_TYPE_BREF &&
+         SILC_TYPE_CONS != SILC_TYPE_OREF &&
+         SILC_TYPE_CONS != SILC_TYPE_BREF &&
+         SILC_TYPE_OREF != SILC_TYPE_BREF);
 
   /* inline object test skipped - it is done in test_inl */
 
@@ -18,10 +18,10 @@ BEGIN_TEST_METHOD(test_object_type)
   silc_obj o;
 
   o = silc_cons(c, SILC_OBJ_NIL, SILC_OBJ_NIL);
-  assert(SILC_GET_TYPE(o) == SILC_OBJ_CONS_TYPE);
+  assert(SILC_GET_TYPE(o) == SILC_TYPE_CONS);
 
   o = silc_sym_from_buf(c, "s", 1);
-  assert(SILC_GET_TYPE(o) == SILC_OBJ_OREF_TYPE);
+  assert(SILC_GET_TYPE(o) == SILC_TYPE_OREF);
 
   /* TODO: bref test */
 

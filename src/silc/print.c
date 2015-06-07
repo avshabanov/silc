@@ -22,12 +22,12 @@ static void print_unknown(silc_obj o, FILE* out) {
 
 static void print_inl(silc_obj o, FILE* out) {
   switch (SILC_GET_INL_SUBTYPE(o)) {
-    case SILC_OBJ_INL_SUBTYPE_NIL:
+    case SILC_INL_SUBTYPE_NIL:
       fputs("nil", out);
       break;
 
     /* Boolean type */
-    case SILC_OBJ_INL_SUBTYPE_BOOL:
+    case SILC_INL_SUBTYPE_BOOL:
       switch (o) {
         case SILC_OBJ_TRUE:
           fputs("true", out);
@@ -41,7 +41,7 @@ static void print_inl(silc_obj o, FILE* out) {
       }
       break;
 
-    case SILC_OBJ_INL_SUBTYPE_INT:
+    case SILC_INL_SUBTYPE_INT:
       {
         int val = silc_obj_to_int(o);
         fprintf(out, "%d", val);
@@ -73,7 +73,7 @@ static void print_cons(struct silc_ctx_t* c, silc_obj o, FILE* out) {
       break;
     }
 
-    if (SILC_GET_TYPE(cdr) == SILC_OBJ_CONS_TYPE) {
+    if (SILC_GET_TYPE(cdr) == SILC_TYPE_CONS) {
       fputc(' ', out);
       continue;
     }
@@ -135,21 +135,21 @@ static void print_bref(struct silc_ctx_t* c, silc_obj o, FILE* out) {
 }
 
 void silc_print(struct silc_ctx_t* c, silc_obj o, FILE* out) {
-  switch (o & SILC_OBJ_TYPE_MASK) {
+  switch (o & SILC_INT_TYPE_MASK) {
     /* Inline type */
-    case SILC_OBJ_INL_TYPE:
+    case SILC_TYPE_INL:
       print_inl(o, out);
       break;
 
-    case SILC_OBJ_CONS_TYPE:
+    case SILC_TYPE_CONS:
       print_cons(c, o, out);
       break;
 
-    case SILC_OBJ_OREF_TYPE:
+    case SILC_TYPE_OREF:
       print_oref(c, o, out);
       break;
 
-    case SILC_OBJ_BREF_TYPE:
+    case SILC_TYPE_BREF:
       print_bref(c, o, out);
       break;
 

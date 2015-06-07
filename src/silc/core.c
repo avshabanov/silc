@@ -170,11 +170,11 @@ silc_obj silc_eq(struct silc_ctx_t* c, silc_obj lhs, silc_obj rhs) {
   int rhs_len = 0;
 
   switch (type) {
-    case SILC_OBJ_INL_TYPE:
+    case SILC_TYPE_INL:
       return SILC_OBJ_FALSE; /* expected literal match for inline types */
 
 
-    case SILC_OBJ_CONS_TYPE:
+    case SILC_TYPE_CONS:
       lhs_po = silc_parse_cons(c->mem, lhs);
       rhs_po = silc_parse_cons(c->mem, rhs);
       if (SILC_OBJ_TRUE == silc_eq(c, lhs_po[0], rhs_po[0])) {
@@ -182,7 +182,7 @@ silc_obj silc_eq(struct silc_ctx_t* c, silc_obj lhs, silc_obj rhs) {
       }
       return SILC_OBJ_FALSE;
 
-    case SILC_OBJ_OREF_TYPE:
+    case SILC_TYPE_OREF:
       subtype = silc_parse_ref(c->mem, lhs, &lhs_len, &lhs_pb, &lhs_po);
       if (silc_parse_ref(c->mem, rhs, &rhs_len, &rhs_pb, &rhs_po) != subtype) {
         return SILC_OBJ_FALSE;
@@ -205,7 +205,7 @@ silc_obj silc_eq(struct silc_ctx_t* c, silc_obj lhs, silc_obj rhs) {
       }
       return SILC_OBJ_TRUE;
 
-    case SILC_OBJ_BREF_TYPE:
+    case SILC_TYPE_BREF:
       subtype = silc_parse_ref(c->mem, lhs, &lhs_len, &lhs_pb, &lhs_po);
       if (silc_parse_ref(c->mem, rhs, &rhs_len, &rhs_pb, &rhs_po) != subtype) {
         return SILC_OBJ_FALSE;
@@ -233,7 +233,7 @@ int silc_get_ref_subtype(struct silc_ctx_t* c, silc_obj o) {
  */
 
 static silc_obj silc_hash_table(struct silc_ctx_t* c, int initial_size) {
-  silc_obj result = silc_alloc_obj(c->mem, initial_size + 1, NULL, SILC_OBJ_OREF_TYPE, SILC_OREF_HASHTABLE_SUBTYPE);
+  silc_obj result = silc_alloc_obj(c->mem, initial_size + 1, NULL, SILC_TYPE_OREF, SILC_OREF_HASHTABLE_SUBTYPE);
   silc_get_oref_contents(c->mem, result)[0] = silc_int_to_obj(0); /* element count */
   return result;
 }
@@ -328,7 +328,7 @@ silc_obj silc_sym_from_buf(struct silc_ctx_t* c, const char* buf, int size) {
     silc_str(c, buf, size),     /* [1] symbol string */
     silc_err_from_code(SILC_ERR_UNRESOLVED_SYMBOL) /* [2] assoc (initially unresolved) */
   };
-  silc_obj result = silc_alloc_obj(c->mem, 3, contents, SILC_OBJ_OREF_TYPE, SILC_OREF_SYMBOL_SUBTYPE);
+  silc_obj result = silc_alloc_obj(c->mem, 3, contents, SILC_TYPE_OREF, SILC_OREF_SYMBOL_SUBTYPE);
 
   /* insert that entry to the hash table */
   hash_table[pos] = silc_cons(c, result, hash_table_cell);
@@ -357,7 +357,7 @@ silc_obj silc_set_sym_assoc(struct silc_ctx_t* c, silc_obj o, silc_obj new_assoc
 }
 
 silc_obj silc_str(struct silc_ctx_t* c, const char* buf, int size) {
-  return silc_alloc_obj(c->mem, size, buf, SILC_OBJ_BREF_TYPE, SILC_BREF_STR_SUBTYPE);
+  return silc_alloc_obj(c->mem, size, buf, SILC_TYPE_BREF, SILC_BREF_STR_SUBTYPE);
 }
 
 int silc_get_str_chars(struct silc_ctx_t* c, silc_obj o, char* buf, int pos, int size) {
@@ -379,12 +379,12 @@ int silc_get_str_chars(struct silc_ctx_t* c, silc_obj o, char* buf, int pos, int
 
 silc_obj silc_cons(struct silc_ctx_t* c, silc_obj car, silc_obj cdr) {
   silc_obj contents[] = { car, cdr };
-  return silc_alloc_obj(c->mem, 2, contents, SILC_OBJ_CONS_TYPE, SILC_CONS_SUBTYPE);
+  return silc_alloc_obj(c->mem, 2, contents, SILC_TYPE_CONS, SILC_CONS_SUBTYPE);
 }
 
 static inline silc_obj get_cons_cell(struct silc_ctx_t* c, silc_obj cons, int pos) {
   silc_obj result;
-  if (SILC_GET_TYPE(cons) == SILC_OBJ_CONS_TYPE) {
+  if (SILC_GET_TYPE(cons) == SILC_TYPE_CONS) {
     silc_obj* contents = silc_parse_cons(c->mem, cons);
     result = contents[pos];
   } else {

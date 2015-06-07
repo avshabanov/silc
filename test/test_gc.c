@@ -59,13 +59,13 @@ BEGIN_TEST_METHOD(test_alloc_cons)
 
   /* Test code goes here - try to allocate and check that allocation succeeeded */
   silc_obj a1[] = { silc_int_to_obj(1), SILC_OBJ_NIL };
-  silc_obj o1 = silc_alloc_obj(m, 2, a1, SILC_OBJ_CONS_TYPE, SILC_CONS_SUBTYPE);
+  silc_obj o1 = silc_alloc_obj(m, 2, a1, SILC_TYPE_CONS, SILC_CONS_SUBTYPE);
 
   silc_obj a2[] = { silc_int_to_obj(2), o1 };
-  silc_obj o2 = silc_alloc_obj(m, 2, a2, SILC_OBJ_CONS_TYPE, SILC_CONS_SUBTYPE);
+  silc_obj o2 = silc_alloc_obj(m, 2, a2, SILC_TYPE_CONS, SILC_CONS_SUBTYPE);
 
   silc_obj a3[] = { silc_int_to_obj(3), o2 };
-  silc_obj o3 = silc_alloc_obj(m, 2, a3, SILC_OBJ_CONS_TYPE, SILC_CONS_SUBTYPE);
+  silc_obj o3 = silc_alloc_obj(m, 2, a3, SILC_TYPE_CONS, SILC_CONS_SUBTYPE);
 
   /* test contents */
   assert(o1 != o2 && o2 != o3 && o3 != o1);
@@ -90,13 +90,13 @@ BEGIN_TEST_METHOD(test_alloc_oref)
 
   /* Test code goes here - try to allocate and check that allocation succeeeded */
   silc_obj a1[] = { silc_int_to_obj(1001) };
-  silc_obj o1 = silc_alloc_obj(m, COUNTOF(a1), a1, SILC_OBJ_OREF_TYPE, 10);
+  silc_obj o1 = silc_alloc_obj(m, COUNTOF(a1), a1, SILC_TYPE_OREF, 10);
 
   silc_obj a2[] = { silc_int_to_obj(2001), silc_int_to_obj(2002) };
-  silc_obj o2 = silc_alloc_obj(m, COUNTOF(a2), a2, SILC_OBJ_OREF_TYPE, 11);
+  silc_obj o2 = silc_alloc_obj(m, COUNTOF(a2), a2, SILC_TYPE_OREF, 11);
 
   silc_obj a3[] = { silc_int_to_obj(3001), silc_int_to_obj(3002), silc_int_to_obj(3003) };
-  silc_obj o3 = silc_alloc_obj(m, COUNTOF(a3), a3, SILC_OBJ_OREF_TYPE, 12);
+  silc_obj o3 = silc_alloc_obj(m, COUNTOF(a3), a3, SILC_TYPE_OREF, 12);
 
   /* test contents */
   subtype = silc_parse_ref(m, o1, &content_length, NULL, &content);
@@ -124,13 +124,13 @@ BEGIN_TEST_METHOD(test_alloc_bref)
 
   /* Test code goes here - try to allocate and check that allocation succeeeded */
   const char* a1 = "number one";
-  silc_obj o1 = silc_alloc_obj(m, strlen(a1), a1, SILC_OBJ_BREF_TYPE, 20);
+  silc_obj o1 = silc_alloc_obj(m, strlen(a1), a1, SILC_TYPE_BREF, 20);
 
   const char* a2 = "numero dos";
-  silc_obj o2 = silc_alloc_obj(m, strlen(a2), a2, SILC_OBJ_BREF_TYPE, 21);
+  silc_obj o2 = silc_alloc_obj(m, strlen(a2), a2, SILC_TYPE_BREF, 21);
 
   const char* a3 = "three";
-  silc_obj o3 = silc_alloc_obj(m, strlen(a3), a3, SILC_OBJ_BREF_TYPE, 22);
+  silc_obj o3 = silc_alloc_obj(m, strlen(a3), a3, SILC_TYPE_BREF, 22);
 
   /* test contents */
   subtype = silc_parse_ref(m, o1, &content_length, &content, NULL);
@@ -154,13 +154,13 @@ BEGIN_TEST_METHOD(test_gc_full_cleanup)
 
   /* Test code goes here - allocate a few different objects */
   silc_obj a1[] = { silc_int_to_obj(1), SILC_OBJ_NIL };
-  silc_obj o1 = silc_alloc_obj(m, 2, a1, SILC_OBJ_CONS_TYPE, SILC_CONS_SUBTYPE);
+  silc_obj o1 = silc_alloc_obj(m, 2, a1, SILC_TYPE_CONS, SILC_CONS_SUBTYPE);
   
   silc_obj a2[] = { silc_int_to_obj(2001), silc_int_to_obj(2002) };
-  silc_obj o2 = silc_alloc_obj(m, COUNTOF(a2), a2, SILC_OBJ_OREF_TYPE, 11);
+  silc_obj o2 = silc_alloc_obj(m, COUNTOF(a2), a2, SILC_TYPE_OREF, 11);
   
   const char* a3 = "three";
-  silc_obj o3 = silc_alloc_obj(m, strlen(a3), a3, SILC_OBJ_BREF_TYPE, 22);
+  silc_obj o3 = silc_alloc_obj(m, strlen(a3), a3, SILC_TYPE_BREF, 22);
 
   assert(o1 != o2 && o2 != o3 && o3 != o1);
 
@@ -221,27 +221,27 @@ BEGIN_TEST_METHOD(test_gc_partial_cleanup)
 
   /* Test code goes here - allocate a few different objects */
   const char* a1 = "three";
-  silc_obj o1 = silc_alloc_obj(m, strlen(a1), a1, SILC_OBJ_BREF_TYPE, 101);
+  silc_obj o1 = silc_alloc_obj(m, strlen(a1), a1, SILC_TYPE_BREF, 101);
 
   silc_obj a2[] = { o1, silc_int_to_obj(2002) };
-  silc_obj o2 = silc_alloc_obj(m, COUNTOF(a2), a2, SILC_OBJ_OREF_TYPE, 102);
+  silc_obj o2 = silc_alloc_obj(m, COUNTOF(a2), a2, SILC_TYPE_OREF, 102);
 
   silc_obj a3[] = { silc_int_to_obj(3), SILC_OBJ_NIL };
-  silc_obj o3 = silc_alloc_obj(m, 2, a3, SILC_OBJ_CONS_TYPE, SILC_CONS_SUBTYPE);
+  silc_obj o3 = silc_alloc_obj(m, 2, a3, SILC_TYPE_CONS, SILC_CONS_SUBTYPE);
 
-  silc_obj o4 = silc_alloc_obj(m, 1, NULL, SILC_OBJ_BREF_TYPE, 104);
+  silc_obj o4 = silc_alloc_obj(m, 1, NULL, SILC_TYPE_BREF, 104);
 
   silc_obj a5[] = { o4, SILC_OBJ_NIL };
-  silc_obj o5 = silc_alloc_obj(m, 2, a5, SILC_OBJ_CONS_TYPE, SILC_CONS_SUBTYPE);
+  silc_obj o5 = silc_alloc_obj(m, 2, a5, SILC_TYPE_CONS, SILC_CONS_SUBTYPE);
 
   const char* a6 = "number six";
-  silc_obj o6 = silc_alloc_obj(m, strlen(a6), a6, SILC_OBJ_BREF_TYPE, 106);
+  silc_obj o6 = silc_alloc_obj(m, strlen(a6), a6, SILC_TYPE_BREF, 106);
 
   silc_obj a7[] = { o6, o5 };
-  silc_obj o7 = silc_alloc_obj(m, 2, a7, SILC_OBJ_CONS_TYPE, SILC_CONS_SUBTYPE);
+  silc_obj o7 = silc_alloc_obj(m, 2, a7, SILC_TYPE_CONS, SILC_CONS_SUBTYPE);
 
   silc_obj a8[] = { o1, o6, o7 };
-  silc_obj o8 = silc_alloc_obj(m, COUNTOF(a8), a8, SILC_OBJ_OREF_TYPE, 108);
+  silc_obj o8 = silc_alloc_obj(m, COUNTOF(a8), a8, SILC_TYPE_OREF, 108);
 
   silc_obj objs[] = { o1, o2, o3, o4, o5, o6, o7, o8 };
   for (int i = 0; i < COUNTOF(objs); ++i) {

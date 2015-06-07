@@ -34,7 +34,7 @@ static silc_obj * get_contents_and_mark(struct silc_mem_t * mem, silc_obj obj) {
   } else {
     /* object has not been marked, mark it and return its contents */
     mem->buf[pos_index] = pos_fval | SILC_INTERNAL_POS_GC_BIT;
-    result = mem->buf + (pos_fval >> SILC_INTERNAL_POS_SHIFT);
+    result = mem->buf + (pos_fval >> SILC_INT_POS_SHIFT);
   }
 
   return result;
@@ -44,7 +44,7 @@ static void gc_mark(struct silc_mem_t * mem, silc_obj v) {
   silc_obj * t;
 
   switch (SILC_GET_TYPE(v)) {
-    case SILC_OBJ_CONS_TYPE:
+    case SILC_TYPE_CONS:
       t = get_contents_and_mark(mem, v);
       if (t == NULL) {
         break;
@@ -54,7 +54,7 @@ static void gc_mark(struct silc_mem_t * mem, silc_obj v) {
       gc_mark(mem, t[1]); /* cons.cdr */
       break;
 
-    case SILC_OBJ_OREF_TYPE: /* contents: sequence of silc_obj */
+    case SILC_TYPE_OREF: /* contents: sequence of silc_obj */
       t = get_contents_and_mark(mem, v);
       if (t == NULL) {
         break;
@@ -68,7 +68,7 @@ static void gc_mark(struct silc_mem_t * mem, silc_obj v) {
       }
       break;
 
-    case SILC_OBJ_BREF_TYPE: /* contents: unknown, but no GC-able things, mark and return */
+    case SILC_TYPE_BREF: /* contents: unknown, but no GC-able things, mark and return */
       get_contents_and_mark(mem, v);
       break;
   }
@@ -144,7 +144,7 @@ LPosFound:
     result = new_pos_index;
 
     /* record currently available index */
-    mem->buf[mem->last_pos_index - new_pos_index] = (mem->avail_index << SILC_INTERNAL_POS_SHIFT) | type;
+    mem->buf[mem->last_pos_index - new_pos_index] = (mem->avail_index << SILC_INT_POS_SHIFT) | type;
 
     /* update position indexes counter */
     mem->pos_count = new_pos_count;
@@ -182,11 +182,11 @@ static void update_positions(struct silc_mem_t* mem, int pos_index, int obj_size
       continue; /* no need to update free position cell */
     }
 
-    int type = fpos & SILC_OBJ_TYPE_MASK;
-    int obj_pos = fpos >> SILC_INTERNAL_POS_SHIFT;
+    int type = fpos & SILC_INT_TYPE_MASK;
+    int obj_pos = fpos >> SILC_INT_POS_SHIFT;
 
     /* update position */
-    mem->buf[mem->last_pos_index - j] = ((obj_pos - obj_size) << SILC_INTERNAL_POS_SHIFT) | type;
+    mem->buf[mem->last_pos_index - j] = ((obj_pos - obj_size) << SILC_INT_POS_SHIFT) | type;
   }
 }
 
@@ -241,19 +241,19 @@ void silc_gc(struct silc_mem_t * mem) {
     }
 
     /* calculate object size and move memory */
-    int obj_index = fpos >> SILC_INTERNAL_POS_SHIFT;
+    int obj_index = fpos >> SILC_INT_POS_SHIFT;
     silc_obj* obj_mem = mem->buf + obj_index;
     int obj_size = -1;
-    switch (fpos & SILC_OBJ_TYPE_MASK) {
-      case SILC_OBJ_CONS_TYPE:
+    switch (fpos & SILC_INT_TYPE_MASK) {
+      case SILC_TYPE_CONS:
         obj_size = 2;
         break;
 
-      case SILC_OBJ_OREF_TYPE:
+      case SILC_TYPE_OREF:
         obj_size = 2 + silc_obj_to_int(obj_mem[1]);
         break;
 
-      case SILC_OBJ_BREF_TYPE:
+      case SILC_TYPE_BREF:
         obj_size = 2 + silc_obj_count_from_byte_count(silc_obj_to_int(obj_mem[1]));
         break;
     }
@@ -298,10 +298,10 @@ silc_obj silc_alloc_obj(struct silc_mem_t* mem,
   silc_obj* p_layout;
 
   switch (type) {
-    case SILC_OBJ_CONS_TYPE:
+    case SILC_TYPE_CONS:
       assert(content_length == 2 && subtype == SILC_CONS_SUBTYPE);
       pos_index = alloc_or_fail(mem, 2, type);
-      p_layout = mem->buf + (mem->buf[mem->last_pos_index - pos_index] >> SILC_INTERNAL_POS_SHIFT);
+      p_layout = mem->buf + (mem->buf[mem->last_pos_index - pos_index] >> SILC_INT_POS_SHIFT);
       if (content != NULL) {
         p_layout[0] = ((silc_obj *) content)[0]; /* car */
         p_layout[1] = ((silc_obj *) content)[1]; /* cdr */
@@ -311,10 +311,10 @@ silc_obj silc_alloc_obj(struct silc_mem_t* mem,
       }
       break;
 
-    case SILC_OBJ_OREF_TYPE:
+    case SILC_TYPE_OREF:
       assert(content_length > 0);
       pos_index = alloc_or_fail(mem, 2 + content_length, type);
-      p_layout = mem->buf + (mem->buf[mem->last_pos_index - pos_index] >> SILC_INTERNAL_POS_SHIFT);
+      p_layout = mem->buf + (mem->buf[mem->last_pos_index - pos_index] >> SILC_INT_POS_SHIFT);
       *p_layout++ = silc_int_to_obj(subtype);
       *p_layout++ = silc_int_to_obj(content_length);
       if (content != NULL) {
@@ -324,10 +324,10 @@ silc_obj silc_alloc_obj(struct silc_mem_t* mem,
       }
       break;
 
-    case SILC_OBJ_BREF_TYPE:
+    case SILC_TYPE_BREF:
       assert(content_length > 0);
       pos_index = alloc_or_fail(mem, 2 + silc_obj_count_from_byte_count(content_length), type);
-      p_layout = mem->buf + (mem->buf[mem->last_pos_index - pos_index] >> SILC_INTERNAL_POS_SHIFT);
+      p_layout = mem->buf + (mem->buf[mem->last_pos_index - pos_index] >> SILC_INT_POS_SHIFT);
       *p_layout++ = silc_int_to_obj(subtype);
       *p_layout++ = silc_int_to_obj(content_length);
       if (content != NULL) {
@@ -341,5 +341,5 @@ silc_obj silc_alloc_obj(struct silc_mem_t* mem,
       assert(!"Unknown object type");
   }
 
-  return pos_index < 0 ? SILC_OBJ_NIL : ((((silc_obj) pos_index) << SILC_OBJ_TYPE_SHIFT) | type);
+  return pos_index < 0 ? SILC_OBJ_NIL : ((((silc_obj) pos_index) << SILC_INT_TYPE_SHIFT) | type);
 }
