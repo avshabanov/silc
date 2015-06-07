@@ -71,10 +71,8 @@ static silc_obj read_list(struct silc_ctx_t * c, FILE * f) {
   }
 
   ungetc(ch, f);
-  silc_obj car = silc_read(c, f);
-  if (silc_try_get_err_code(car) > 0) {
-    return car; /* propagate error */
-  }
+  silc_obj car;
+  SILC_CHECKED_SET(car, silc_read(c, f));
 
   /* take first element and recursively read the rest of this list */
   return silc_cons(c, car, read_list(c, f));

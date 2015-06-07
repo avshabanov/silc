@@ -161,6 +161,16 @@ static inline int silc_try_get_err_code(silc_obj obj) {
 }
 
 /**
+ * Helper macro, that assigns the result of expression to the result variable.
+ * Returns result immediately if expression result is an error.
+ */
+#define SILC_CHECKED_SET(result, expr) \
+  result = (expr); \
+  if (silc_try_get_err_code(result) > 0) { \
+    return result; \
+  }
+
+/**
  * Represents cons cell.
  */
 #define SILC_OBJ_CONS_TYPE            (1)

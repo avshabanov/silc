@@ -54,12 +54,51 @@ BEGIN_TEST_METHOD(test_non_error_object_to_code_conversion)
   assert(silc_try_get_err_code(o) < 0 && "-1 to error code convesion should fail");
 END_TEST_METHOD()
 
+
+
+static silc_obj return_error() {
+  return silc_err_from_code(SILC_ERR_INTERNAL);
+}
+
+static silc_obj do_error_op() {
+  silc_obj result;
+  SILC_CHECKED_SET(result, return_error());
+  return (result == SILC_OBJ_NIL ? SILC_OBJ_TRUE : SILC_OBJ_FALSE);
+}
+
+BEGIN_TEST_METHOD(test_do_error_op)
+  silc_obj o = do_error_op();
+  assert(silc_try_get_err_code(o) == SILC_ERR_INTERNAL);
+END_TEST_METHOD()
+
+
+
+static silc_obj return_nil() {
+  return SILC_OBJ_NIL;
+}
+
+static silc_obj do_normal_op() {
+  silc_obj result;
+  SILC_CHECKED_SET(result, return_nil());
+  return (result == SILC_OBJ_NIL ? SILC_OBJ_TRUE : SILC_OBJ_FALSE);
+}
+
+BEGIN_TEST_METHOD(test_do_normal_op)
+  silc_obj o = do_normal_op();
+  assert(silc_try_get_err_code(o) < 0);
+  assert(o == SILC_OBJ_TRUE);
+END_TEST_METHOD()
+
+
+/* Entry point */
 int main(int argc, char** argv) {
   TESTS_STARTED();
   test_nil_equivalence_to_zero();
   test_int_conversions();
   test_inline_errors();
   test_non_error_object_to_code_conversion();
+  test_do_error_op();
+  test_do_normal_op();
   TESTS_SUCCEEDED();
   return 0;
 }
