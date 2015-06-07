@@ -43,6 +43,9 @@ BEGIN_TEST_METHOD(test_int_conversions)
   o = silc_int_to_obj(1);
   assert(1 == silc_obj_to_int(o));
 
+  o |= SILC_INT_OBJ_SIGN_BIT; /* change sign */
+  assert(-1 == silc_obj_to_int(o));
+
   o = silc_int_to_obj(1329);
   assert(1329 == silc_obj_to_int(o));
 
