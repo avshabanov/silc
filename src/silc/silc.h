@@ -66,8 +66,8 @@ struct silc_ctx_t;
  */
 #define SILC_OBJ_INL_TYPE             (0)
 
-#define SILC_OBJ_INL_SUBTYPE_MASK     (3)
 #define SILC_OBJ_INL_SUBTYPE_SHIFT    (2)
+#define SILC_OBJ_INL_SUBTYPE_MASK     ((1 << SILC_OBJ_INL_SUBTYPE_SHIFT) - 1)
 
 /**
  * Returns inline object subtype.

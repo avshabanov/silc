@@ -10,6 +10,22 @@ BEGIN_TEST_METHOD(test_object_type)
          SILC_OBJ_CONS_TYPE != SILC_OBJ_OREF_TYPE &&
          SILC_OBJ_CONS_TYPE != SILC_OBJ_BREF_TYPE &&
          SILC_OBJ_OREF_TYPE != SILC_OBJ_BREF_TYPE);
+
+  /* inline object test skipped - it is done in test_inl */
+
+  struct silc_ctx_t * c = silc_new_context();
+
+  silc_obj o;
+
+  o = silc_cons(c, SILC_OBJ_NIL, SILC_OBJ_NIL);
+  assert(SILC_GET_TYPE(o) == SILC_OBJ_CONS_TYPE);
+
+  o = silc_sym_from_buf(c, "s", 1);
+  assert(SILC_GET_TYPE(o) == SILC_OBJ_OREF_TYPE);
+
+  /* TODO: bref test */
+
+  silc_free_context(c);
 END_TEST_METHOD()
 
 BEGIN_TEST_METHOD(test_sym_create)
