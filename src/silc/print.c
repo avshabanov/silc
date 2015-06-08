@@ -13,14 +13,12 @@
  */
 
 #include "silc.h"
-#include "mem.h"
-#include "core.h"
 
-static void print_unknown(silc_obj o, FILE* out) {
-  fprintf(out, "<Unknown#0x%X>", o);
+static void print_unknown(struct silc_ctx_t* c, silc_obj o, FILE* out) {
+  fprintf(out, "<Unknown#%p:%X>", c, o);
 }
 
-static void print_inl(silc_obj o, FILE* out) {
+static void print_inl(struct silc_ctx_t* c, silc_obj o, FILE* out) {
   switch (SILC_GET_INL_SUBTYPE(o)) {
     case SILC_INL_SUBTYPE_NIL:
       fputs("nil", out);
@@ -36,7 +34,7 @@ static void print_inl(silc_obj o, FILE* out) {
           fputs("false", out);
           break;
         default:
-          print_unknown(o, out);
+          print_unknown(c, o, out);
           break;
       }
       break;
@@ -97,16 +95,7 @@ static void print_oref(struct silc_ctx_t* c, silc_obj o, FILE* out) {
       break;
 
     default:
-      {
-        int len = 0;
-        silc_obj* content = NULL;
-        int subtype = silc_parse_ref(c->mem, o, &len, NULL, &content);
-        fprintf(out, "<?oref{subtype=%d, len=%d, content=", subtype, len);
-        for (int i = 0; i < len; ++i) {
-          fprintf(out, " 0x%X", content[i]);
-        }
-        fputs("}>", out);
-      }
+      print_unknown(c, o, out);
   }
 }
 
@@ -121,16 +110,7 @@ static void print_bref(struct silc_ctx_t* c, silc_obj o, FILE* out) {
       break;
 
     default:
-      {
-        int len = 0;
-        char* content = NULL;
-        int subtype = silc_parse_ref(c->mem, o, &len, &content, NULL);
-        fprintf(out, "<?bref{subtype=%d, len=%d, content=", subtype, len);
-        for (int i = 0; i < len; ++i) {
-          fprintf(out, " 0x%02X", content[i]);
-        }
-        fputs("}>", out);
-      }
+      print_unknown(c, o, out);
   }
 }
 
@@ -138,7 +118,7 @@ void silc_print(struct silc_ctx_t* c, silc_obj o, FILE* out) {
   switch (o & SILC_INT_TYPE_MASK) {
     /* Inline type */
     case SILC_TYPE_INL:
-      print_inl(o, out);
+      print_inl(c, o, out);
       break;
 
     case SILC_TYPE_CONS:
@@ -154,6 +134,6 @@ void silc_print(struct silc_ctx_t* c, silc_obj o, FILE* out) {
       break;
 
     default:
-      print_unknown(o, out);
+      print_unknown(c, o, out);
   }
 }

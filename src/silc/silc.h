@@ -324,7 +324,7 @@ silc_obj silc_hash_code(struct silc_ctx_t* c, silc_obj o);
 
 FILE* silc_get_default_out(struct silc_ctx_t * c);
 
-silc_obj silc_read(struct silc_ctx_t * c, FILE * f);
+silc_obj silc_read(struct silc_ctx_t * c, FILE * f, silc_obj eof);
 void silc_print(struct silc_ctx_t* c, silc_obj o, FILE* out);
 
 int silc_get_ref_subtype(struct silc_ctx_t* c, silc_obj o);
@@ -346,6 +346,9 @@ silc_obj silc_cdr(struct silc_ctx_t* c, silc_obj cons);
  * Returns evaluation result that caller should check for an error.
  */
 silc_obj silc_eval(struct silc_ctx_t* c, silc_obj o);
+
+/** Triggers manual garbage collection. */
+void silc_do_gc(struct silc_ctx_t* c);
 
 #ifdef __cplusplus
 }

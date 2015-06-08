@@ -1,5 +1,4 @@
-#include "core.h"
-#include "builtins.h"
+#include "silc.h"
 
 #define TEST_BEFORE(test_id)    open_tmpfile()
 #define TEST_AFTER(test_id)     close_tmpfile()

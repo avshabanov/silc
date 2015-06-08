@@ -1,5 +1,4 @@
-#include "core.h"
-#include "builtins.h"
+#include "silc.h"
 
 #define TEST_BEFORE(test_id)    open_tmpfiles()
 #define TEST_AFTER(test_id)     close_tmpfiles()
@@ -38,7 +37,7 @@ static void assert_eval_result(struct silc_ctx_t* c, const char* input, const ch
   write_and_rewind(out, input);
 
   /* When: */
-  silc_obj result = not_an_error(silc_eval(c, silc_read(c, out)));
+  silc_obj result = not_an_error(silc_eval(c, silc_read(c, out, silc_err_from_code(SILC_ERR_UNEXPECTED_EOF))));
 
   /* Then: */
   silc_print(c, result, in);

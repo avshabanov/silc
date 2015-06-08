@@ -3,6 +3,9 @@
 
 all: tests
 
+repl: silc
+	$(MAKE) -C src/repl
+
 tests: silc
 	$(MAKE) -C test
 
@@ -16,5 +19,5 @@ compile:
 clean:
 	$(MAKE) -C test clean
 	$(MAKE) -C src/silc clean
-
+	$(MAKE) -C src/repl clean
 

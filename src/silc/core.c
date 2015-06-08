@@ -26,7 +26,7 @@
 
 static silc_obj silc_hash_table(struct silc_ctx_t* c, int initial_size);
 
-/* Mem alloc functions */
+/* Low-level mem alloc functions */
 
 static void * xmalloc(size_t size) {
   void * p = malloc(size);
@@ -46,6 +46,12 @@ static void * xmallocz(size_t size) {
 static inline void xfree(void * p) {
   free(p);
 }
+
+/* Garbage collection-related */
+
+
+
+
 
 /* Memory management-related */
 
@@ -189,6 +195,10 @@ void silc_free_context(struct silc_ctx_t * c) {
   xfree(c->stack);
 
   xfree(c);
+}
+
+void silc_do_gc(struct silc_ctx_t* c) {
+  silc_gc(c->mem);
 }
 
 /*

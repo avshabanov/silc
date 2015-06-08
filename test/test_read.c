@@ -1,5 +1,4 @@
-#include "core.h"
-#include "builtins.h"
+#include "silc.h"
 
 #define TEST_BEFORE(test_id)    open_tmpfiles()
 #define TEST_AFTER(test_id)     close_tmpfiles()
@@ -33,13 +32,17 @@ static void close_tmpfiles() {
   }
 }
 
+static inline silc_obj read_obj(struct silc_ctx_t* c) {
+  return silc_read(c, out, silc_err_from_code(SILC_ERR_UNEXPECTED_EOF));
+}
+
 BEGIN_TEST_METHOD(test_read_number)
   /* Given: */
   struct silc_ctx_t* c = silc_new_context();
   write_and_rewind(out, "123");
 
   /* When: */
-  silc_obj o = not_an_error(silc_read(c, out));
+  silc_obj o = not_an_error(read_obj(c));
 
   /* Then: */
   assert(silc_int_to_obj(123) == o);
@@ -52,7 +55,7 @@ BEGIN_TEST_METHOD(test_read_cons_single)
   write_and_rewind(out, "(1)");
 
   /* When: */
-  silc_obj o = not_an_error(silc_read(c, out));
+  silc_obj o = not_an_error(read_obj(c));
 
   /* Then: */
   silc_obj car = silc_car(c, o);
@@ -74,7 +77,7 @@ BEGIN_TEST_METHOD(test_read_cons_multiple)
   write_and_rewind(out, "(1 0 -1)");
 
   /* When: */
-  silc_obj o = not_an_error(silc_read(c, out));
+  silc_obj o = not_an_error(read_obj(c));
 
   /* Then: */
   silc_obj car = silc_car(c, o);
@@ -96,7 +99,7 @@ BEGIN_TEST_METHOD(test_read_cons_nested)
   write_and_rewind(out, "(1 (2 3 (4)))");
 
   /* When: */
-  silc_obj o = not_an_error(silc_read(c, out));
+  silc_obj o = not_an_error(read_obj(c));
 
   /* Then: */
   silc_obj car = silc_car(c, o);
@@ -118,7 +121,7 @@ BEGIN_TEST_METHOD(test_read_special_true)
   write_and_rewind(out, "true");
 
   /* When: */
-  silc_obj o = not_an_error(silc_read(c, out));
+  silc_obj o = not_an_error(read_obj(c));
 
   /* Then: */
   assert(SILC_OBJ_TRUE == o);
@@ -131,7 +134,7 @@ BEGIN_TEST_METHOD(test_read_special_false)
   write_and_rewind(out, "false");
 
   /* When: */
-  silc_obj o = not_an_error(silc_read(c, out));
+  silc_obj o = not_an_error(read_obj(c));
 
   /* Then: */
   assert(SILC_OBJ_FALSE == o);
@@ -144,7 +147,7 @@ BEGIN_TEST_METHOD(test_read_special_nil)
   write_and_rewind(out, "nil");
 
   /* When: */
-  silc_obj o = not_an_error(silc_read(c, out));
+  silc_obj o = not_an_error(read_obj(c));
 
   /* Then: */
   assert(SILC_OBJ_NIL == o);
@@ -158,7 +161,7 @@ static void helper_test_read_symbol(const char* symbol_str) {
   write_and_rewind(out, symbol_str);
 
   /* When: */
-  silc_obj o = not_an_error(silc_read(c, out));
+  silc_obj o = not_an_error(read_obj(c));
 
   /* Then: */
   silc_obj str = SILC_OBJ_NIL;

@@ -71,6 +71,18 @@ silc_obj silc_internal_fn_inc(struct silc_funcall_t* f) {
   return silc_err_from_code(SILC_ERR_INVALID_ARGS); /* Non-incrementable argument */
 }
 
+silc_obj silc_internal_fn_load(struct silc_funcall_t* f) {
+  fputs(";; load is not implemented yet\n", stderr);
+  return silc_err_from_code(SILC_ERR_INTERNAL);
+}
+
+silc_obj silc_internal_fn_gc(struct silc_funcall_t* f) {
+  fputs(";; starting garbage collection...\n", stdout);
+  silc_do_gc(f->ctx);
+  fputs(";; garbage collected.\n", stdout);
+  return SILC_OBJ_NIL;
+}
+
 silc_obj silc_internal_fn_quit(struct silc_funcall_t* f) {
   int code = 0;
   if (f->argc > 0) {

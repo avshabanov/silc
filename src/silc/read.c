@@ -22,6 +22,7 @@
 static silc_obj read_number_or_symbol(struct silc_ctx_t * c, FILE * f);
 static silc_obj read_symbol_or_special(struct silc_ctx_t * c, FILE * f);
 static silc_obj read_list(struct silc_ctx_t * c, FILE * f);
+static silc_obj read_obj(struct silc_ctx_t * c, FILE * f);
 
 /* Implementation */
 
@@ -65,7 +66,7 @@ static int get_nwc(FILE * f) {
   return c;
 }
 
-static silc_obj read_list(struct silc_ctx_t * c, FILE * f) {
+static silc_obj read_list(struct silc_ctx_t* c, FILE * f) {
   int ch = get_nwc(f);
   if (ch == ')') {
     return SILC_OBJ_NIL;
@@ -73,13 +74,13 @@ static silc_obj read_list(struct silc_ctx_t * c, FILE * f) {
 
   ungetc(ch, f);
   silc_obj car;
-  SILC_CHECKED_SET(car, silc_read(c, f));
+  SILC_CHECKED_SET(car, read_obj(c, f));
 
   /* take first element and recursively read the rest of this list */
   return silc_cons(c, car, read_list(c, f));
 }
 
-static silc_obj read_number_or_symbol(struct silc_ctx_t * c, FILE * f) {
+static silc_obj read_number_or_symbol(struct silc_ctx_t* c, FILE * f) {
   int ch = fgetc(f);
   int sign;
   int absval;
@@ -167,7 +168,7 @@ static silc_obj read_symbol_or_special(struct silc_ctx_t * c, FILE * f) {
   return silc_sym_from_buf(c, buf, len);
 }
 
-silc_obj silc_read(struct silc_ctx_t * c, FILE * f) {
+static silc_obj read_obj(struct silc_ctx_t * c, FILE * f) {
   int ch = get_nwc(f);
   if (ch == EOF) {
     return silc_err_from_code(SILC_ERR_UNEXPECTED_EOF);
@@ -188,4 +189,14 @@ silc_obj silc_read(struct silc_ctx_t * c, FILE * f) {
   }
 
   return silc_err_from_code(SILC_ERR_UNEXPECTED_CHARACTER);
+}
+
+silc_obj silc_read(struct silc_ctx_t* c, FILE* f, silc_obj eof) {
+  int ch = get_nwc(f);
+  if (ch == EOF) {
+    return eof;
+  }
+
+  ungetc(ch, f);
+  return read_obj(c, f);
 }

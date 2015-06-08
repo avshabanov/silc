@@ -38,7 +38,7 @@ struct silc_mem_init_t {
   silc_internal_root_obj_iter_start_pfn     root_obj_iter_start;
   silc_internal_root_obj_iter_next_pfn      root_obj_iter_next;
 
-  /* function, that should be called on OOM and abort gracefully abort execution */
+  /* function, that should be called on OOM and gracefully abort execution */
   silc_internal_oom_abort_pfn               oom_abort;
 
   /* custom mem alloc functions, malloc should never return null */
