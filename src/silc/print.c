@@ -45,6 +45,14 @@ static void print_inl(struct silc_ctx_t* c, silc_obj o, FILE* out) {
         fprintf(out, "%d", val);
       }
       break;
+
+    case SILC_INL_SUBTYPE_ERR:
+      {
+        int code = silc_try_get_err_code(o);
+        assert(code > 0);
+        fprintf(stderr, ";; error %d: %s\n", code, silc_err_code_to_str(code));
+      }
+      break;
   }
 }
 

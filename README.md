@@ -11,4 +11,28 @@ It features moveable garbage collector and is perfect for use in a constrained e
 
 Execute ``make all`` in the root dir.
 
+Then do:
 
+```
+$ rlwrap src/repl/target/silc
+```
+
+Sample session log:
+
+```
+;; SilcLisp by Alex Shabanov
+
+? (+ 1)
+1
+? (+)
+0
+? (+ 1 2 (+ 4 5))
+12
+? nil
+nil
+? true
+true
+? (quit)
+
+;; Exiting... Good bye!
+```

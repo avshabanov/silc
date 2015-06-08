@@ -1,7 +1,7 @@
 
 .PHONY: all tests silc clean compile
 
-all: tests
+all: tests repl
 
 repl: silc
 	$(MAKE) -C src/repl

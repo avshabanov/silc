@@ -1,8 +1,8 @@
 
 include ../../silc.mk
 
-CFLAGS += -I../src/silc
-LFLAGS += ../src/silc/target/silc.a
+CFLAGS += -I../silc
+LFLAGS += ../silc/target/silc.a
 
 .PHONY: clean compile
 
@@ -13,10 +13,10 @@ all: compile
 compile: target/silc
 
 target/silc: $(TO)/repl.o
-	$(LINKER) -o target/repl $(TO)/repl.o $(LFLAGS)
+	$(LINKER) -o target/silc $(TO)/repl.o $(LFLAGS)
 
 
-$(TO)/repl.o: repl.c
+$(TO)/repl.o: target repl.c
 	$(CC) $(CFLAGS) -c repl.c -o $(TO)/repl.o
 
 

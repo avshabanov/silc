@@ -49,7 +49,7 @@ silc_obj silc_internal_fn_plus(struct silc_funcall_t* f) {
     }
   }
 
-  return result;
+  return silc_int_to_obj(result);
 }
 
 silc_obj silc_internal_fn_inc(struct silc_funcall_t* f) {
@@ -78,19 +78,18 @@ silc_obj silc_internal_fn_load(struct silc_funcall_t* f) {
 
 silc_obj silc_internal_fn_gc(struct silc_funcall_t* f) {
   fputs(";; starting garbage collection...\n", stdout);
-  silc_do_gc(f->ctx);
+  silc_gc(f->ctx);
   fputs(";; garbage collected.\n", stdout);
   return SILC_OBJ_NIL;
 }
 
 silc_obj silc_internal_fn_quit(struct silc_funcall_t* f) {
-  int code = 0;
   if (f->argc > 0) {
-    silc_obj arg1 = f->argv[0];
-    if (SILC_GET_INL_SUBTYPE(arg1) == SILC_INL_SUBTYPE_INT) {
-      code = silc_obj_to_int(arg1);
+    silc_obj arg;
+    SILC_CHECKED_SET(arg, f->argv[0]);
+    if ((SILC_GET_TYPE(arg) == SILC_TYPE_INL) && (SILC_GET_INL_SUBTYPE(arg) == SILC_INL_SUBTYPE_INT)) {
+      silc_set_exit_code(f->ctx, silc_obj_to_int(arg));
     }
   }
-  exit(code);
-  return SILC_OBJ_NIL;
+  return silc_err_from_code(SILC_ERR_QUIT);
 }

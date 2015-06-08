@@ -55,9 +55,12 @@ struct silc_ctx_t {
   silc_obj              root_cons;
   silc_obj              sym_hash_table;
 
-  /* Builtin functions */
+  /* builtin functions */
   silc_fn_ptr *         fn_array;
   int                   fn_count;
+
+  /* exit code */
+  int                   exit_code;
 };
 
 struct silc_settings_t {
@@ -241,8 +244,62 @@ void silc_free_context(struct silc_ctx_t * c) {
   xfree(c);
 }
 
-void silc_do_gc(struct silc_ctx_t* c) {
+void silc_gc(struct silc_ctx_t* c) {
   silc_int_mem_gc(c->mem);
+}
+
+void silc_set_exit_code(struct silc_ctx_t* c, int code) {
+  c->exit_code = code;
+}
+
+int silc_get_exit_code(struct silc_ctx_t* c) {
+  return c->exit_code;
+}
+
+silc_obj silc_load(struct silc_ctx_t* c, const char* file_name) {
+  /* TODO: implement */
+  return silc_err_from_code(SILC_ERR_INTERNAL);
+}
+
+/**
+ * Converts error code to string.
+ */
+const char* silc_err_code_to_str(int code) {
+  assert(code > 0);
+  switch (code) {
+    case SILC_ERR_INTERNAL:
+      return "internal error";
+
+    case SILC_ERR_STACK_ACCESS:
+      return "stack access error";
+
+    case SILC_ERR_STACK_OVERFLOW:
+      return "stack overflow";
+
+    case SILC_ERR_INVALID_ARGS:
+      return "invalid arguments";
+
+    case SILC_ERR_VALUE_OUT_OF_RANGE:
+      return "value is out of range";
+
+    case SILC_ERR_UNEXPECTED_EOF:
+      return "unexpected end of file";
+
+    case SILC_ERR_UNEXPECTED_CHARACTER:
+      return "unexpected character";
+
+    case SILC_ERR_SYMBOL_TOO_BIG:
+      return "symbol string is too big";
+
+    case SILC_ERR_UNRESOLVED_SYMBOL:
+      return "unresolved symbol";
+
+    case SILC_ERR_NOT_A_FUNCTION:
+      return "object is not a function";
+
+    default:
+      return "unknown error";
+  }
 }
 
 /*

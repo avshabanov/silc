@@ -131,47 +131,13 @@ typedef unsigned int silc_obj;
 #define SILC_ERR_UNRESOLVED_SYMBOL    (470)
 #define SILC_ERR_NOT_A_FUNCTION       (471)
 
+/* Not an error per se, indicates that quit is requested */
+#define SILC_ERR_QUIT                 (508)
+
 /**
  * Converts error code to string.
  */
-static inline const char* silc_err_code_to_str(int code) {
-  assert(code > 0);
-  switch (code) {
-    case SILC_ERR_INTERNAL:
-      return "internal error";
-
-    case SILC_ERR_STACK_ACCESS:
-      return "stack access error";
-
-    case SILC_ERR_STACK_OVERFLOW:
-      return "stack overflow";
-
-    case SILC_ERR_INVALID_ARGS:
-      return "invalid arguments";
-
-    case SILC_ERR_VALUE_OUT_OF_RANGE:
-      return "value is out of range";
-
-    case SILC_ERR_UNEXPECTED_EOF:
-      return "unexpected end of file";
-
-    case SILC_ERR_UNEXPECTED_CHARACTER:
-      return "unexpected character";
-
-    case SILC_ERR_SYMBOL_TOO_BIG:
-      return "symbol string is too big";
-
-    case SILC_ERR_UNRESOLVED_SYMBOL:
-      return "unresolved symbol";
-
-    case SILC_ERR_NOT_A_FUNCTION:
-      return "object is not a function";
-
-    default:
-      return "unknown error";
-  }
-}
-
+const char* silc_err_code_to_str(int code);
 
 #define SILC_MAX_ERR_CODE             ((1<<(SILC_INL_INL_CONTENT_BITS)) - 1)
 
@@ -319,6 +285,15 @@ static inline int silc_obj_to_int(silc_obj o) {
   return val;
 }
 
+/** Triggers manual garbage collection. */
+void silc_gc(struct silc_ctx_t* c);
+
+/** Tries to load contents of a given file */
+silc_obj silc_load(struct silc_ctx_t* c, const char* file_name);
+
+void silc_set_exit_code(struct silc_ctx_t* c, int code);
+int silc_get_exit_code(struct silc_ctx_t* c);
+
 silc_obj silc_eq(struct silc_ctx_t* c, silc_obj lhs, silc_obj rhs);
 silc_obj silc_hash_code(struct silc_ctx_t* c, silc_obj o);
 
@@ -346,9 +321,6 @@ silc_obj silc_cdr(struct silc_ctx_t* c, silc_obj cons);
  * Returns evaluation result that caller should check for an error.
  */
 silc_obj silc_eval(struct silc_ctx_t* c, silc_obj o);
-
-/** Triggers manual garbage collection. */
-void silc_do_gc(struct silc_ctx_t* c);
 
 #ifdef __cplusplus
 }
