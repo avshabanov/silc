@@ -20,19 +20,7 @@
 struct silc_mem_init_t;
 struct silc_mem_t;
 
-/* Functions support */
-
-struct silc_fn_t;
-
-typedef silc_obj (* silc_pfn)(struct silc_fn_t* ft);
-
-struct silc_fn_t {
-  struct silc_ctx_t *   ctx; /* back reference to the owning context */
-  silc_pfn              pfn;
-  int                   flags;
-};
-
-#define SILC_FN_SPEC_FORM     (1<<1)
+typedef silc_obj (* silc_fn_ptr)(struct silc_funcall_t* f);
 
 struct silc_ctx_t {
   struct silc_settings_t* settings;
@@ -50,43 +38,16 @@ struct silc_ctx_t {
   /* root object for service data */
   silc_obj              root_cons;
   silc_obj              sym_hash_table;
+
+  /* Builtin functions */
+  silc_fn_ptr *         fn_array;
+  int                   fn_count;
 };
 
 struct silc_settings_t {
   FILE *    out;        /* default output stream (used in print function) */
 };
 
-/* Internal helpers */
-
-static inline silc_obj arg_peek(struct silc_ctx_t * c, size_t offset) {
-  size_t pos = c->stack_last - offset;
-  if (pos >= c->stack_size || pos < c->stack_frame_start) {
-    assert(!"requested argument is out of stack frame");
-    return silc_err_from_code(SILC_ERR_STACK_ACCESS);
-  }
-
-  return c->stack[pos];
-}
-
-static inline silc_obj arg_push(struct silc_ctx_t * c, silc_obj o) {
-  if (c->stack_last >= c->stack_size) {
-    assert(!"provided argument is out of stack");
-    return silc_err_from_code(SILC_ERR_STACK_ACCESS);
-  }
-
-  c->stack[++c->stack_last] = o;
-  return o;
-}
-
-static inline size_t arg_count(struct silc_ctx_t * c) {
-  return c->stack_last - c->stack_frame_start;
-}
-
-static inline size_t str_hash_code_len(const char * buf, size_t buf_size) {
-  size_t result = 0;
-  size_t i;
-  for (i = 0; i < buf_size; ++i) {
-    result += 31 * ((size_t) buf[i]);
-  }
-  return result;
-}
+#ifndef countof
+#define countof(arr)    (sizeof(arr) / sizeof(arr[0]))
+#endif

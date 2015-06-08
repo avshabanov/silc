@@ -90,23 +90,23 @@ BEGIN_TEST_METHOD(test_alloc_oref)
 
   /* Test code goes here - try to allocate and check that allocation succeeeded */
   silc_obj a1[] = { silc_int_to_obj(1001) };
-  silc_obj o1 = silc_alloc_obj(m, COUNTOF(a1), a1, SILC_TYPE_OREF, 10);
+  silc_obj o1 = silc_alloc_obj(m, countof(a1), a1, SILC_TYPE_OREF, 10);
 
   silc_obj a2[] = { silc_int_to_obj(2001), silc_int_to_obj(2002) };
-  silc_obj o2 = silc_alloc_obj(m, COUNTOF(a2), a2, SILC_TYPE_OREF, 11);
+  silc_obj o2 = silc_alloc_obj(m, countof(a2), a2, SILC_TYPE_OREF, 11);
 
   silc_obj a3[] = { silc_int_to_obj(3001), silc_int_to_obj(3002), silc_int_to_obj(3003) };
-  silc_obj o3 = silc_alloc_obj(m, COUNTOF(a3), a3, SILC_TYPE_OREF, 12);
+  silc_obj o3 = silc_alloc_obj(m, countof(a3), a3, SILC_TYPE_OREF, 12);
 
   /* test contents */
   subtype = silc_parse_ref(m, o1, &content_length, NULL, &content);
-  assert(10 == subtype && content_length == COUNTOF(a1) && 0 == memcmp(a1, content, content_length * sizeof(silc_obj)));
+  assert(10 == subtype && content_length == countof(a1) && 0 == memcmp(a1, content, content_length * sizeof(silc_obj)));
 
   subtype = silc_parse_ref(m, o2, &content_length, NULL, &content);
-  assert(11 == subtype && content_length == COUNTOF(a2) && 0 == memcmp(a2, content, content_length * sizeof(silc_obj)));
+  assert(11 == subtype && content_length == countof(a2) && 0 == memcmp(a2, content, content_length * sizeof(silc_obj)));
 
   subtype = silc_parse_ref(m, o3, &content_length, NULL, &content);
-  assert(12 == subtype && content_length == COUNTOF(a3) && 0 == memcmp(a3, content, content_length * sizeof(silc_obj)));
+  assert(12 == subtype && content_length == countof(a3) && 0 == memcmp(a3, content, content_length * sizeof(silc_obj)));
 
   /* cleanup test objects */
   silc_internal_free_mem(m);
@@ -157,7 +157,7 @@ BEGIN_TEST_METHOD(test_gc_full_cleanup)
   silc_obj o1 = silc_alloc_obj(m, 2, a1, SILC_TYPE_CONS, SILC_CONS_SUBTYPE);
   
   silc_obj a2[] = { silc_int_to_obj(2001), silc_int_to_obj(2002) };
-  silc_obj o2 = silc_alloc_obj(m, COUNTOF(a2), a2, SILC_TYPE_OREF, 11);
+  silc_obj o2 = silc_alloc_obj(m, countof(a2), a2, SILC_TYPE_OREF, 11);
   
   const char* a3 = "three";
   silc_obj o3 = silc_alloc_obj(m, strlen(a3), a3, SILC_TYPE_BREF, 22);
@@ -202,7 +202,7 @@ static void* partial_gc_root_obj_iter_next(struct silc_mem_init_t* mem_init,
                                            silc_obj** objs, size_t* size) {
   struct partial_gc_t * pgc = (struct partial_gc_t*) iter_context;
   *objs = pgc->root_obj_arr;
-  *size = COUNTOF(pgc->root_obj_arr);
+  *size = countof(pgc->root_obj_arr);
   return NULL;
 }
 
@@ -224,7 +224,7 @@ BEGIN_TEST_METHOD(test_gc_partial_cleanup)
   silc_obj o1 = silc_alloc_obj(m, strlen(a1), a1, SILC_TYPE_BREF, 101);
 
   silc_obj a2[] = { o1, silc_int_to_obj(2002) };
-  silc_obj o2 = silc_alloc_obj(m, COUNTOF(a2), a2, SILC_TYPE_OREF, 102);
+  silc_obj o2 = silc_alloc_obj(m, countof(a2), a2, SILC_TYPE_OREF, 102);
 
   silc_obj a3[] = { silc_int_to_obj(3), SILC_OBJ_NIL };
   silc_obj o3 = silc_alloc_obj(m, 2, a3, SILC_TYPE_CONS, SILC_CONS_SUBTYPE);
@@ -241,10 +241,10 @@ BEGIN_TEST_METHOD(test_gc_partial_cleanup)
   silc_obj o7 = silc_alloc_obj(m, 2, a7, SILC_TYPE_CONS, SILC_CONS_SUBTYPE);
 
   silc_obj a8[] = { o1, o6, o7 };
-  silc_obj o8 = silc_alloc_obj(m, COUNTOF(a8), a8, SILC_TYPE_OREF, 108);
+  silc_obj o8 = silc_alloc_obj(m, countof(a8), a8, SILC_TYPE_OREF, 108);
 
   silc_obj objs[] = { o1, o2, o3, o4, o5, o6, o7, o8 };
-  for (int i = 0; i < COUNTOF(objs); ++i) {
+  for (int i = 0; i < countof(objs); ++i) {
     silc_obj* obj_content = NULL;
     char* char_content = NULL;
     int len = 0;
@@ -274,7 +274,7 @@ BEGIN_TEST_METHOD(test_gc_partial_cleanup)
   assert(MEM_SIZE == stats.total_memory);
 
   silc_obj objs2[] = { o7, o6, o5, o4, o1 };
-  for (int i = 0; i < COUNTOF(objs2); ++i) {
+  for (int i = 0; i < countof(objs2); ++i) {
     silc_obj* obj_content = NULL;
     char* char_content = NULL;
     int len = 0;

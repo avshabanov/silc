@@ -17,6 +17,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
 #include "mem.h"
 #include "builtins.h"
@@ -109,8 +110,50 @@ static void init_globals(struct silc_ctx_t* c) {
   c->root_cons = silc_cons(c, c->sym_hash_table, SILC_OBJ_NIL);
 }
 
+static silc_fn_ptr g_silc_builtin_functions[] = {
+  &silc_internal_fn_print,
+  &silc_internal_fn_inc,
+  &silc_internal_fn_quit
+};
+
+static int find_fn_pos(struct silc_ctx_t* c, silc_fn_ptr fn_ptr) {
+  for (int i = 0; i < c->fn_count; ++i) {
+    if (c->fn_array[i] == fn_ptr) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+#define SILC_FN_SPECIAL       (1 << 1)
+
+static void add_function(struct silc_ctx_t* c, const char* symbol_name, silc_fn_ptr fn_ptr, bool special) {
+  int fn_index = find_fn_pos(c, fn_ptr);
+  if (fn_index < 0) {
+    fputs("Unregistered function", stderr); /* should not happen */
+    abort();
+  }
+
+  int fn_flags = (special ? SILC_FN_SPECIAL : 0);
+
+  /* alloc function */
+  silc_obj content[] = { silc_int_to_obj(fn_index), silc_int_to_obj(fn_flags) };
+  silc_obj fn = silc_alloc_obj(c->mem, countof(content), content, SILC_TYPE_OREF, SILC_OREF_FUNCTION_SUBTYPE);
+
+  /* assoc that function with a symbol */
+  silc_obj sym = silc_sym_from_buf(c, symbol_name, strlen(symbol_name));
+  silc_obj prev_assoc = silc_set_sym_assoc(c, sym, fn);
+  assert(silc_try_get_err_code(prev_assoc) == SILC_ERR_UNRESOLVED_SYMBOL);
+}
+
 static void init_builtins(struct silc_ctx_t* c) {
-  /**/
+  /* functions array */
+  c->fn_array = g_silc_builtin_functions;
+  c->fn_count = countof(g_silc_builtin_functions);
+
+  add_function(c, "inc", &silc_internal_fn_inc, false);
+  add_function(c, "print", &silc_internal_fn_print, false);
+  add_function(c, "quit", &silc_internal_fn_quit, false);
 }
 
 struct silc_ctx_t * silc_new_context() {
@@ -147,6 +190,10 @@ void silc_free_context(struct silc_ctx_t * c) {
 /*
  * Helper functions
  */
+
+FILE* silc_get_default_out(struct silc_ctx_t * c) {
+  return c->settings->out;
+}
 
 silc_obj silc_eq(struct silc_ctx_t* c, silc_obj lhs, silc_obj rhs) {
   if (lhs == rhs) {
@@ -399,4 +446,59 @@ silc_obj silc_car(struct silc_ctx_t* c, silc_obj cons) {
 
 silc_obj silc_cdr(struct silc_ctx_t* c, silc_obj cons) {
   return get_cons_cell(c, cons, 1);
+}
+
+
+
+//static silc_obj
+
+static silc_obj eval_cons(struct silc_ctx_t* c, silc_obj cons) {
+//  silc_obj* contents = silc_parse_cons(c->mem, cons);
+//
+//  /* Get CAR and try evaluate it to function */
+//  silc_obj car = contents[0];
+//  silc_fn_t* fn = NULL;
+
+//  switch (SILC_GET_TYPE(car)) {
+//    case SILC_TYPE_OREF:
+//      {
+//        int len = 0;
+//        silc_obj* contents = NULL;
+//        int subtype = silc_parse_ref(c->mem, o, &len, NULL, &contents);
+//        if (subtype == SILC_OREF_SYMBOL_SUBTYPE) {
+//          return o; /* Non-symbolic objects evaluate to themselves */
+//        }
+//      }
+//      break;
+//  }
+//
+//  if (fn == NULL) {
+//    return silc_err_from_code(SILC_ERR_NOT_A_FUNCTION);
+//  }
+
+  /* call that function */
+  return SILC_OBJ_NIL;
+}
+
+static silc_obj eval_oref(struct silc_ctx_t* c, silc_obj o) {
+  int len = 0;
+  silc_obj* contents = NULL;
+  int subtype = silc_parse_ref(c->mem, o, &len, NULL, &contents);
+  if (subtype != SILC_OREF_SYMBOL_SUBTYPE) {
+    return o; /* Non-symbolic objects evaluate to themselves */
+  }
+
+  /* object is a symbol, we need to return an association */
+  return contents[2];
+}
+
+silc_obj silc_eval(struct silc_ctx_t* c, silc_obj o) {
+  switch (SILC_GET_TYPE(o)) {
+    case SILC_TYPE_CONS:
+      return eval_cons(c, o);
+
+    case SILC_TYPE_OREF:
+      return eval_oref(c, o);
+  }
+  return o; /* all the other object types evaluate to themselves */
 }

@@ -25,7 +25,6 @@ extern "C" {
 /* Base declarations */
 
 typedef unsigned int silc_obj;
-struct silc_ctx_t;
 
 /**
  * Counts of bits, used to represent object type information.
@@ -128,6 +127,7 @@ struct silc_ctx_t;
 
 /* Symbol has not been associated with a value */
 #define SILC_ERR_UNRESOLVED_SYMBOL    (470)
+#define SILC_ERR_NOT_A_FUNCTION       (471)
 
 /**
  * Converts error code to string.
@@ -158,6 +158,9 @@ static inline const char* silc_err_code_to_str(int code) {
 
     case SILC_ERR_UNRESOLVED_SYMBOL:
       return "unresolved symbol";
+
+    case SILC_ERR_NOT_A_FUNCTION:
+      return "object is not a function";
 
     default:
       return "unknown error";
@@ -206,6 +209,7 @@ static inline int silc_try_get_err_code(silc_obj obj) {
 
 #define SILC_OREF_SYMBOL_SUBTYPE      (10)
 #define SILC_OREF_HASHTABLE_SUBTYPE   (20)
+#define SILC_OREF_FUNCTION_SUBTYPE    (21)
 
 /**
  * Contains length, then sequence of bytes.
@@ -232,6 +236,21 @@ static inline int silc_try_get_err_code(silc_obj obj) {
 #define SILC_OBJ_ZERO                 SILC_MAKE_INL_OBJECT(0, SILC_INL_SUBTYPE_INT)
 
 
+
+/* Interpreter context */
+
+struct silc_ctx_t;
+
+struct silc_funcall_t {
+  /** Calling context */
+  struct silc_ctx_t* ctx;
+
+  /** Count of arguments */
+  int argc;
+
+  /** Arguments vector */
+  silc_obj* argv;
+};
 
 /* Service functions */
 
@@ -298,6 +317,8 @@ static inline int silc_obj_to_int(silc_obj o) {
 silc_obj silc_eq(struct silc_ctx_t* c, silc_obj lhs, silc_obj rhs);
 silc_obj silc_hash_code(struct silc_ctx_t* c, silc_obj o);
 
+FILE* silc_get_default_out(struct silc_ctx_t * c);
+
 silc_obj silc_read(struct silc_ctx_t * c, FILE * f);
 void silc_print(struct silc_ctx_t* c, silc_obj o, FILE* out);
 
@@ -314,6 +335,12 @@ int silc_get_str_chars(struct silc_ctx_t* c, silc_obj o, char* buf, int pos, int
 silc_obj silc_cons(struct silc_ctx_t* c, silc_obj car, silc_obj cdr);
 silc_obj silc_car(struct silc_ctx_t* c, silc_obj cons);
 silc_obj silc_cdr(struct silc_ctx_t* c, silc_obj cons);
+
+/**
+ * This is the most important function. It evaluates the given argument in a given context.
+ * Returns evaluation result that caller should check for an error.
+ */
+silc_obj silc_eval(struct silc_ctx_t* c, silc_obj o);
 
 #ifdef __cplusplus
 }

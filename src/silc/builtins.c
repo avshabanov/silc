@@ -13,32 +13,50 @@
  */
 
 #include "builtins.h"
+#include <stdlib.h>
 
-silc_obj silc_internal_fn_print(struct silc_fn_t* f) {
-  if (arg_count(f->ctx) != 1) {
-    return silc_err_from_code(SILC_ERR_INVALID_ARGS);
+#define EXPECT_ARG_COUNT(f, count) \
+  if (f->argc != (count)) { \
+    return silc_err_from_code(SILC_ERR_INVALID_ARGS); \
   }
 
-  silc_print(f->ctx, arg_peek(f->ctx, 0), f->ctx->settings->out);
+silc_obj silc_internal_fn_print(struct silc_funcall_t* f) {
+  EXPECT_ARG_COUNT(f, 1);
+
+  silc_obj arg;
+  SILC_CHECKED_SET(arg, f->argv[0]);
+  silc_print(f->ctx, arg, silc_get_default_out(f->ctx));
 
   return SILC_OBJ_NIL;
 }
 
-silc_obj silc_internal_fn_inc(struct silc_fn_t* f) {
-  if (arg_count(f->ctx) != 1) {
-    return silc_err_from_code(SILC_ERR_INVALID_ARGS);
-  }
+silc_obj silc_internal_fn_inc(struct silc_funcall_t* f) {
+  EXPECT_ARG_COUNT(f, 1);
 
-  silc_obj arg = arg_peek(f->ctx, 0);
+  silc_obj arg;
+  SILC_CHECKED_SET(arg, f->argv[0]);
 
   if ((SILC_GET_TYPE(arg) == SILC_TYPE_INL) && (SILC_GET_INL_SUBTYPE(arg) == SILC_INL_SUBTYPE_INT)) {
     int val = silc_obj_to_int(arg) + 1;
     if (val > SILC_MAX_INT) {
+      /* TODO: upgrade to long (or BigInteger) */
       val = -1;
     }
 
     return silc_int_to_obj(val);
   }
 
-  return SILC_OBJ_ZERO; /* Non-incrementable argument */
+  return silc_err_from_code(SILC_ERR_INVALID_ARGS); /* Non-incrementable argument */
+}
+
+silc_obj silc_internal_fn_quit(struct silc_funcall_t* f) {
+  int code = 0;
+  if (f->argc > 0) {
+    silc_obj arg1 = f->argv[0];
+    if (SILC_GET_INL_SUBTYPE(arg1) == SILC_INL_SUBTYPE_INT) {
+      code = silc_obj_to_int(arg1);
+    }
+  }
+  exit(code);
+  return SILC_OBJ_NIL;
 }

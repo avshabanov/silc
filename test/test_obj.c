@@ -45,13 +45,13 @@ BEGIN_TEST_METHOD(test_sym_create)
 
   /* create N symbols */
   silc_obj syms[4096];
-  for (size_t n = 0; n < COUNTOF(syms); ++n) {
+  for (size_t n = 0; n < countof(syms); ++n) {
     size_t sz = (size_t) sprintf(buf, "s%zu", n);
     syms[n] = silc_sym_from_buf(c, buf, sz);
   }
 
   /* try recreate N symbols - it should result in matching symbols */
-  for (size_t n = 0; n < COUNTOF(syms); ++n) {
+  for (size_t n = 0; n < countof(syms); ++n) {
     size_t sz = (size_t) sprintf(buf, "s%zu", n);
     silc_obj sym = silc_sym_from_buf(c, buf, sz);
     assert(syms[n] == sym);
@@ -68,7 +68,7 @@ BEGIN_TEST_METHOD(test_sym_create)
   }
 
   /* test new assocs */
-  for (size_t n = 0; n < COUNTOF(syms); ++n) {
+  for (size_t n = 0; n < countof(syms); ++n) {
     size_t sz = (size_t) sprintf(buf, "s%zu", n);
     silc_obj sym = silc_sym_from_buf(c, buf, sz);
     assert(syms[n] == sym);

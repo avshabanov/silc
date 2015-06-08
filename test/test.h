@@ -5,7 +5,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define COUNTOF(arr)                (sizeof(arr)/sizeof((arr)[0]))
+#ifndef countof
+#define countof(arr)    (sizeof(arr) / sizeof(arr[0]))
+#endif
 
 #ifndef TEST_BEFORE
 #define TEST_BEFORE() {}
