@@ -55,13 +55,13 @@ static void* root_obj_iter_start(struct silc_mem_init_t* mem_init) {
 
 static void* root_obj_iter_next(struct silc_mem_init_t* mem_init,
                                 void* iter_context,
-                                silc_obj** objs, size_t* size) {
+                                silc_obj** objs, int* size) {
   void* result = NULL;
   struct silc_ctx_t* c = mem_init->context;
 
   if (iter_context == ((void *)1)) {
     *objs = c->stack;
-    *size = c->stack_last;
+    *size = c->stack_end;
     result = (void*)2;
   } else if (iter_context == ((void *)2)) {
     *objs = &c->root_cons;
@@ -448,36 +448,86 @@ silc_obj silc_cdr(struct silc_ctx_t* c, silc_obj cons) {
   return get_cons_cell(c, cons, 1);
 }
 
+/*
+ * Evaluation
+ */
 
+static silc_obj push_arguments(struct silc_ctx_t* c, silc_obj cdr, bool special_form) {
+  while (cdr != SILC_OBJ_NIL) {
+    silc_obj car;
 
-//static silc_obj
+    /* get next element */
+    if (SILC_GET_TYPE(cdr) == SILC_TYPE_CONS) {
+      silc_obj* contents = silc_parse_cons(c->mem, cdr);
+      car = contents[0];
+      cdr = contents[1];
+    } else {
+      /* dotted form */
+      car = cdr;
+      cdr = SILC_OBJ_NIL;
+    }
+
+    /* evaluate if this is not a special form */
+    if (!special_form) {
+      car = silc_eval(c, car);
+    }
+
+    /* calculate new stack pointer position */
+    int new_stack_end = c->stack_end + 1;
+    if (new_stack_end >= c->stack_size) {
+      return silc_err_from_code(SILC_ERR_STACK_OVERFLOW);
+    }
+
+    /* insert element to the stack and update last element index */
+    c->stack[c->stack_end] = car;
+    c->stack_end = new_stack_end;
+  }
+  return SILC_OBJ_NIL;
+}
 
 static silc_obj eval_cons(struct silc_ctx_t* c, silc_obj cons) {
-//  silc_obj* contents = silc_parse_cons(c->mem, cons);
-//
-//  /* Get CAR and try evaluate it to function */
-//  silc_obj car = contents[0];
-//  silc_fn_t* fn = NULL;
+  /* Parse cons */
+  silc_obj* cons_contents = silc_parse_cons(c->mem, cons);
 
-//  switch (SILC_GET_TYPE(car)) {
-//    case SILC_TYPE_OREF:
-//      {
-//        int len = 0;
-//        silc_obj* contents = NULL;
-//        int subtype = silc_parse_ref(c->mem, o, &len, NULL, &contents);
-//        if (subtype == SILC_OREF_SYMBOL_SUBTYPE) {
-//          return o; /* Non-symbolic objects evaluate to themselves */
-//        }
-//      }
-//      break;
-//  }
-//
-//  if (fn == NULL) {
-//    return silc_err_from_code(SILC_ERR_NOT_A_FUNCTION);
-//  }
+  /* Get CAR and try evaluate it to function */
+  silc_obj fn = silc_eval(c, cons_contents[0]);
 
-  /* call that function */
-  return SILC_OBJ_NIL;
+  /* Try parse as a function */
+  int len = 0;
+  silc_obj* fn_contents = NULL;
+  int subtype = silc_parse_ref(c->mem, fn, &len, NULL, &fn_contents);
+  if (subtype != SILC_OREF_FUNCTION_SUBTYPE) {
+    return silc_err_from_code(SILC_ERR_NOT_A_FUNCTION);
+  }
+
+  /* parse function */
+  int fn_pos = silc_obj_to_int(fn_contents[0]);
+  int fn_flags = silc_obj_to_int(fn_contents[1]);
+  assert(fn_pos >= 0 && fn_pos < c->fn_count);
+  silc_fn_ptr fn_ptr = c->fn_array[fn_pos];
+
+  /* save stack state */
+  int prev_end = c->stack_end;
+
+  /* put arguments to the function stack */
+  silc_obj result = push_arguments(c, cons_contents[1], fn_flags & SILC_FN_SPECIAL);
+  if (silc_try_get_err_code(result) < 0) {
+    /* ok, now prepare function call context */
+    struct silc_funcall_t funcall = {
+      .ctx = c,
+      .argc = c->stack_end - prev_end,
+      .argv = c->stack + prev_end
+    };
+    assert(funcall.argc >= 0);
+
+    /* call that function */
+    result = fn_ptr(&funcall);
+  }
+
+  /* Restore stack state */
+  c->stack_end = prev_end;
+
+  return result;
 }
 
 static silc_obj eval_oref(struct silc_ctx_t* c, silc_obj o) {

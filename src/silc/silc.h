@@ -108,6 +108,8 @@ typedef unsigned int silc_obj;
 
 /* Stack access error (i.e. argument requested is out of stack frame) */
 #define SILC_ERR_STACK_ACCESS         (501)
+/* Stack exceeded */
+#define SILC_ERR_STACK_OVERFLOW       (502)
 
 /* User called function */
 #define SILC_ERR_INVALID_ARGS         (400)
@@ -140,6 +142,9 @@ static inline const char* silc_err_code_to_str(int code) {
 
     case SILC_ERR_STACK_ACCESS:
       return "stack access error";
+
+    case SILC_ERR_STACK_OVERFLOW:
+      return "stack overflow";
 
     case SILC_ERR_INVALID_ARGS:
       return "invalid arguments";

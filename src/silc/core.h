@@ -27,9 +27,8 @@ struct silc_ctx_t {
 
   /* stack */
   silc_obj*             stack;
-  size_t                stack_frame_start;
-  size_t                stack_last; /* function arguments count == stack_last-stack_frame_start */
-  size_t                stack_size; /* total stack size */
+  int                   stack_end;  /* index of the position after last inserted element in the stack */
+  int                   stack_size; /* total stack size */
 
   /* heap */
   struct silc_mem_init_t* mem_init;

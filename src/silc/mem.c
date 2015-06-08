@@ -77,10 +77,10 @@ static void gc_mark(struct silc_mem_t * mem, silc_obj v) {
 static void mark_root_objects(struct silc_mem_t * mem) {
   for (void * context = mem->init->root_obj_iter_start(mem->init);;) {
     silc_obj * root_obj_arr = NULL;
-    size_t root_obj_arr_size = 0;
+    int root_obj_arr_size = 0;
     context = mem->init->root_obj_iter_next(mem->init, context, &root_obj_arr, &root_obj_arr_size);
 
-    for (size_t n = 0; n < root_obj_arr_size; ++n) {
+    for (int n = 0; n < root_obj_arr_size; ++n) {
       gc_mark(mem, root_obj_arr[n]);
     }
 
@@ -91,7 +91,7 @@ static void mark_root_objects(struct silc_mem_t * mem) {
 }
 
 static void init_heap(struct silc_mem_t* mem, struct silc_mem_init_t* init) {
-  size_t init_memory_size = init->init_memory_size;
+  int init_memory_size = init->init_memory_size;
   if (init_memory_size < 4) {
     fputs(";; Init memory size is too small\n", stderr);
     abort();

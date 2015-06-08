@@ -7,7 +7,7 @@ static void* empty_root_obj_iter_start(struct silc_mem_init_t* mem_init) {
 
 static void* empty_root_obj_iter_next(struct silc_mem_init_t* mem_init,
                                       void* iter_context,
-                                      silc_obj** objs, size_t* size) {
+                                      silc_obj** objs, int* size) {
   return NULL;
 }
 
@@ -199,7 +199,7 @@ static void* partial_gc_root_obj_iter_start(struct silc_mem_init_t* mem_init) {
 
 static void* partial_gc_root_obj_iter_next(struct silc_mem_init_t* mem_init,
                                            void* iter_context,
-                                           silc_obj** objs, size_t* size) {
+                                           silc_obj** objs, int* size) {
   struct partial_gc_t * pgc = (struct partial_gc_t*) iter_context;
   *objs = pgc->root_obj_arr;
   *size = countof(pgc->root_obj_arr);

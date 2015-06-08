@@ -21,9 +21,9 @@ struct silc_mem_init_t;
 typedef void* (* silc_internal_root_obj_iter_start_pfn)(struct silc_mem_init_t* mem_init);
 typedef void* (* silc_internal_root_obj_iter_next_pfn)(struct silc_mem_init_t* mem_init,
                                                        void* iter_context,
-                                                       silc_obj** objs, size_t* size);
+                                                       silc_obj** objs, int* size);
 
-typedef void (* silc_internal_report_gc_stats_pfn)(struct silc_mem_init_t* mem_init, size_t cell_free);
+typedef void (* silc_internal_report_gc_stats_pfn)(struct silc_mem_init_t* mem_init, int cell_free);
 
 typedef void (* silc_internal_oom_abort_pfn)(struct silc_mem_init_t* mem_init);
 
@@ -31,8 +31,8 @@ typedef void (* silc_internal_oom_abort_pfn)(struct silc_mem_init_t* mem_init);
 struct silc_mem_init_t {
   void*                   context; /* custom context, for callback purposes */
 
-  size_t                  init_memory_size; /* initial memory size */
-  size_t                  max_memory_size; /* maximum memory size */
+  int                     init_memory_size; /* initial memory size */
+  int                     max_memory_size; /* maximum memory size */
 
   /* for root objects discovery (used for garbage collector purposes) */
   silc_internal_root_obj_iter_start_pfn     root_obj_iter_start;
@@ -129,7 +129,7 @@ silc_obj silc_alloc_obj(struct silc_mem_t* mem,
 
 /* Position layout: [...index...{gc_bit}{type_bits}] */
 #define SILC_INTERNAL_POS_GC_BIT      (1 << SILC_INT_TYPE_SHIFT)
-#define SILC_INT_POS_SHIFT       (SILC_INT_TYPE_SHIFT + 1)
+#define SILC_INT_POS_SHIFT            (SILC_INT_TYPE_SHIFT + 1)
 #define SILC_INTERNAL_FREE_POS        (-1)
 
 static inline int silc_get_pos_index(struct silc_mem_t* mem, silc_obj obj) {
