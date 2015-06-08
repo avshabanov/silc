@@ -17,5 +17,8 @@
 #include "silc.h"
 
 silc_obj silc_internal_fn_print(struct silc_funcall_t* f);
+
 silc_obj silc_internal_fn_inc(struct silc_funcall_t* f);
+silc_obj silc_internal_fn_plus(struct silc_funcall_t* f);
+
 silc_obj silc_internal_fn_quit(struct silc_funcall_t* f);

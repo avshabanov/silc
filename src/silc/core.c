@@ -113,6 +113,7 @@ static void init_globals(struct silc_ctx_t* c) {
 static silc_fn_ptr g_silc_builtin_functions[] = {
   &silc_internal_fn_print,
   &silc_internal_fn_inc,
+  &silc_internal_fn_plus,
   &silc_internal_fn_quit
 };
 
@@ -152,7 +153,10 @@ static void init_builtins(struct silc_ctx_t* c) {
   c->fn_count = countof(g_silc_builtin_functions);
 
   add_function(c, "inc", &silc_internal_fn_inc, false);
+  add_function(c, "+", &silc_internal_fn_plus, false);
+
   add_function(c, "print", &silc_internal_fn_print, false);
+
   add_function(c, "quit", &silc_internal_fn_quit, false);
 }
 
