@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-#include "core.h"
+#include "silc.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,7 +22,47 @@
 #include "mem.h"
 #include "builtins.h"
 
+/* Helper macros */
+
+#ifndef countof
+#define countof(arr)    (sizeof(arr) / sizeof(arr[0]))
+#endif
+
+
 /* Forward declarations */
+
+#include "silc.h"
+
+/* Struct declarations */
+struct silc_mem_init_t;
+struct silc_mem_t;
+
+typedef silc_obj (* silc_fn_ptr)(struct silc_funcall_t* f);
+
+struct silc_ctx_t {
+  struct silc_settings_t* settings;
+
+  /* stack */
+  silc_obj*             stack;
+  int                   stack_end;  /* index of the position after last inserted element in the stack */
+  int                   stack_size; /* total stack size */
+
+  /* heap */
+  struct silc_mem_init_t* mem_init;
+  struct silc_mem_t*      mem;
+
+  /* root object for service data */
+  silc_obj              root_cons;
+  silc_obj              sym_hash_table;
+
+  /* Builtin functions */
+  silc_fn_ptr *         fn_array;
+  int                   fn_count;
+};
+
+struct silc_settings_t {
+  FILE *    out;        /* default output stream (used in print function) */
+};
 
 static silc_obj silc_hash_table(struct silc_ctx_t* c, int initial_size);
 
@@ -47,11 +87,15 @@ static inline void xfree(void * p) {
   free(p);
 }
 
-/* Garbage collection-related */
+/* Memory-related */
 
-
-
-
+static inline silc_obj* get_oref(struct silc_mem_t* mem, silc_obj obj) {
+  int content_length = 0;
+  silc_obj* result = NULL;
+  int subtype = silc_int_mem_parse_ref(mem, obj, &content_length, NULL, &result);
+  assert(result != NULL && subtype >= 0);
+  return result;
+}
 
 /* Memory management-related */
 
@@ -105,7 +149,7 @@ static void init_mem(struct silc_ctx_t* c) {
   init->free_mem = xfree;
 
   struct silc_mem_t* mem = xmallocz(sizeof(struct silc_mem_t));
-  silc_internal_init_mem(mem, init);
+  silc_int_mem_init(mem, init);
 
   c->mem_init = init;
   c->mem = mem;
@@ -145,7 +189,7 @@ static void add_function(struct silc_ctx_t* c, const char* symbol_name, silc_fn_
 
   /* alloc function */
   silc_obj content[] = { silc_int_to_obj(fn_index), silc_int_to_obj(fn_flags) };
-  silc_obj fn = silc_alloc_obj(c->mem, countof(content), content, SILC_TYPE_OREF, SILC_OREF_FUNCTION_SUBTYPE);
+  silc_obj fn = silc_int_mem_alloc(c->mem, countof(content), content, SILC_TYPE_OREF, SILC_OREF_FUNCTION_SUBTYPE);
 
   /* assoc that function with a symbol */
   silc_obj sym = silc_sym_from_buf(c, symbol_name, strlen(symbol_name));
@@ -189,7 +233,7 @@ struct silc_ctx_t * silc_new_context() {
 }
 
 void silc_free_context(struct silc_ctx_t * c) {
-  silc_internal_free_mem(c->mem);
+  silc_int_mem_free(c->mem);
   xfree(c->mem);
   xfree(c->settings);
   xfree(c->stack);
@@ -198,7 +242,7 @@ void silc_free_context(struct silc_ctx_t * c) {
 }
 
 void silc_do_gc(struct silc_ctx_t* c) {
-  silc_gc(c->mem);
+  silc_int_mem_gc(c->mem);
 }
 
 /*
@@ -244,8 +288,8 @@ silc_obj silc_eq(struct silc_ctx_t* c, silc_obj lhs, silc_obj rhs) {
       return SILC_OBJ_FALSE;
 
     case SILC_TYPE_OREF:
-      subtype = silc_parse_ref(c->mem, lhs, &lhs_len, &lhs_pb, &lhs_po);
-      if (silc_parse_ref(c->mem, rhs, &rhs_len, &rhs_pb, &rhs_po) != subtype) {
+      subtype = silc_int_mem_parse_ref(c->mem, lhs, &lhs_len, &lhs_pb, &lhs_po);
+      if (silc_int_mem_parse_ref(c->mem, rhs, &rhs_len, &rhs_pb, &rhs_po) != subtype) {
         return SILC_OBJ_FALSE;
       }
 
@@ -267,8 +311,8 @@ silc_obj silc_eq(struct silc_ctx_t* c, silc_obj lhs, silc_obj rhs) {
       return SILC_OBJ_TRUE;
 
     case SILC_TYPE_BREF:
-      subtype = silc_parse_ref(c->mem, lhs, &lhs_len, &lhs_pb, &lhs_po);
-      if (silc_parse_ref(c->mem, rhs, &rhs_len, &rhs_pb, &rhs_po) != subtype) {
+      subtype = silc_int_mem_parse_ref(c->mem, lhs, &lhs_len, &lhs_pb, &lhs_po);
+      if (silc_int_mem_parse_ref(c->mem, rhs, &rhs_len, &rhs_pb, &rhs_po) != subtype) {
         return SILC_OBJ_FALSE;
       }
 
@@ -286,7 +330,7 @@ silc_obj silc_eq(struct silc_ctx_t* c, silc_obj lhs, silc_obj rhs) {
 }
 
 int silc_get_ref_subtype(struct silc_ctx_t* c, silc_obj o) {
-  return silc_parse_ref(c->mem, o, NULL, NULL, NULL);
+  return silc_int_mem_parse_ref(c->mem, o, NULL, NULL, NULL);
 }
 
 /*
@@ -294,8 +338,8 @@ int silc_get_ref_subtype(struct silc_ctx_t* c, silc_obj o) {
  */
 
 static silc_obj silc_hash_table(struct silc_ctx_t* c, int initial_size) {
-  silc_obj result = silc_alloc_obj(c->mem, initial_size + 1, NULL, SILC_TYPE_OREF, SILC_OREF_HASHTABLE_SUBTYPE);
-  silc_get_oref_contents(c->mem, result)[0] = silc_int_to_obj(0); /* element count */
+  silc_obj result = silc_int_mem_alloc(c->mem, initial_size + 1, NULL, SILC_TYPE_OREF, SILC_OREF_HASHTABLE_SUBTYPE);
+  get_oref(c->mem, result)[0] = silc_int_to_obj(0); /* element count */
   return result;
 }
 
@@ -313,7 +357,7 @@ static silc_obj get_sym_info(struct silc_ctx_t* c, silc_obj o, silc_obj* sym_str
   int len = 0;
   silc_obj* obj_contents = NULL;
   char* byte_contents = NULL;
-  int subtype = silc_parse_ref(c->mem, o, &len, &byte_contents, &obj_contents);
+  int subtype = silc_int_mem_parse_ref(c->mem, o, &len, &byte_contents, &obj_contents);
   if (subtype != SILC_OREF_SYMBOL_SUBTYPE) {
     return SILC_OBJ_NIL;
   }
@@ -336,7 +380,7 @@ static silc_obj get_sym_info(struct silc_ctx_t* c, silc_obj o, silc_obj* sym_str
 static int compare_str(struct silc_ctx_t* c, silc_obj str, const char* buf, int size) {
   int len = 0;
   char* char_content = NULL;
-  int subtype = silc_parse_ref(c->mem, str, &len, &char_content, NULL);
+  int subtype = silc_int_mem_parse_ref(c->mem, str, &len, &char_content, NULL);
   assert(SILC_BREF_STR_SUBTYPE == subtype);
 
   int size_diff = len - size;
@@ -362,7 +406,7 @@ static int is_same_sym_str(struct silc_ctx_t* c, silc_obj sym, const char* buf, 
 silc_obj silc_sym_from_buf(struct silc_ctx_t* c, const char* buf, int size) {
   int hash_table_size = 0;
   silc_obj* hash_table_contents;
-  int hash_table_subtype = silc_parse_ref(c->mem, c->sym_hash_table, &hash_table_size, NULL, &hash_table_contents);
+  int hash_table_subtype = silc_int_mem_parse_ref(c->mem, c->sym_hash_table, &hash_table_size, NULL, &hash_table_contents);
 
   assert(hash_table_subtype == SILC_OREF_HASHTABLE_SUBTYPE && hash_table_size > 0 && hash_table_contents != NULL);
 
@@ -389,7 +433,7 @@ silc_obj silc_sym_from_buf(struct silc_ctx_t* c, const char* buf, int size) {
     silc_str(c, buf, size),     /* [1] symbol string */
     silc_err_from_code(SILC_ERR_UNRESOLVED_SYMBOL) /* [2] assoc (initially unresolved) */
   };
-  silc_obj result = silc_alloc_obj(c->mem, 3, contents, SILC_TYPE_OREF, SILC_OREF_SYMBOL_SUBTYPE);
+  silc_obj result = silc_int_mem_alloc(c->mem, 3, contents, SILC_TYPE_OREF, SILC_OREF_SYMBOL_SUBTYPE);
 
   /* insert that entry to the hash table */
   hash_table[pos] = silc_cons(c, result, hash_table_cell);
@@ -406,7 +450,7 @@ silc_obj silc_get_sym_info(struct silc_ctx_t* c, silc_obj o, silc_obj* sym_str) 
 silc_obj silc_set_sym_assoc(struct silc_ctx_t* c, silc_obj o, silc_obj new_assoc) {
   int len = 0;
   silc_obj* obj_contents = NULL;
-  int subtype = silc_parse_ref(c->mem, o, &len, NULL, &obj_contents);
+  int subtype = silc_int_mem_parse_ref(c->mem, o, &len, NULL, &obj_contents);
   if (subtype != SILC_OREF_SYMBOL_SUBTYPE) {
     return SILC_ERR_INVALID_ARGS;
   }
@@ -418,7 +462,7 @@ silc_obj silc_set_sym_assoc(struct silc_ctx_t* c, silc_obj o, silc_obj new_assoc
 }
 
 silc_obj silc_str(struct silc_ctx_t* c, const char* buf, int size) {
-  return silc_alloc_obj(c->mem, size, buf, SILC_TYPE_BREF, SILC_BREF_STR_SUBTYPE);
+  return silc_int_mem_alloc(c->mem, size, buf, SILC_TYPE_BREF, SILC_BREF_STR_SUBTYPE);
 }
 
 int silc_get_str_chars(struct silc_ctx_t* c, silc_obj o, char* buf, int pos, int size) {
@@ -426,7 +470,7 @@ int silc_get_str_chars(struct silc_ctx_t* c, silc_obj o, char* buf, int pos, int
   char* char_content = NULL;
   silc_obj* obj_content = NULL;
   int result = 0;
-  if (silc_parse_ref(c->mem, o, &len, &char_content, &obj_content) == SILC_BREF_STR_SUBTYPE) {
+  if (silc_int_mem_parse_ref(c->mem, o, &len, &char_content, &obj_content) == SILC_BREF_STR_SUBTYPE) {
     assert(len >= 0 && char_content != NULL);
     result = ((pos + size) < len ? size : len - pos);
     if (result > 0 && char_content != NULL) {
@@ -440,7 +484,7 @@ int silc_get_str_chars(struct silc_ctx_t* c, silc_obj o, char* buf, int pos, int
 
 silc_obj silc_cons(struct silc_ctx_t* c, silc_obj car, silc_obj cdr) {
   silc_obj contents[] = { car, cdr };
-  return silc_alloc_obj(c->mem, 2, contents, SILC_TYPE_CONS, SILC_CONS_SUBTYPE);
+  return silc_int_mem_alloc(c->mem, 2, contents, SILC_TYPE_CONS, SILC_INT_MEM_CONS_SUBTYPE);
 }
 
 static inline silc_obj get_cons_cell(struct silc_ctx_t* c, silc_obj cons, int pos) {
@@ -509,7 +553,7 @@ static silc_obj eval_cons(struct silc_ctx_t* c, silc_obj cons) {
   /* Try parse as a function */
   int len = 0;
   silc_obj* fn_contents = NULL;
-  int subtype = silc_parse_ref(c->mem, fn, &len, NULL, &fn_contents);
+  int subtype = silc_int_mem_parse_ref(c->mem, fn, &len, NULL, &fn_contents);
   if (subtype != SILC_OREF_FUNCTION_SUBTYPE) {
     return silc_err_from_code(SILC_ERR_NOT_A_FUNCTION);
   }
@@ -547,7 +591,7 @@ static silc_obj eval_cons(struct silc_ctx_t* c, silc_obj cons) {
 static silc_obj eval_oref(struct silc_ctx_t* c, silc_obj o) {
   int len = 0;
   silc_obj* contents = NULL;
-  int subtype = silc_parse_ref(c->mem, o, &len, NULL, &contents);
+  int subtype = silc_int_mem_parse_ref(c->mem, o, &len, NULL, &contents);
   if (subtype != SILC_OREF_SYMBOL_SUBTYPE) {
     return o; /* Non-symbolic objects evaluate to themselves */
   }

@@ -25,16 +25,16 @@ static inline int silc_obj_count_from_byte_count(int byte_count) {
 }
 
 static silc_obj * get_contents_and_mark(struct silc_mem_t * mem, silc_obj obj) {
-  int pos_index = silc_get_pos_index(mem, obj);
+  int pos_index = silc_int_mem_get_pos_index(mem, obj);
   silc_obj pos_fval = mem->buf[pos_index];
   silc_obj * result;
 
-  if (pos_fval & SILC_INTERNAL_POS_GC_BIT) {
+  if (pos_fval & SILC_INT_MEM_POS_GC_BIT) {
     result = NULL; /* object has already been marked */
   } else {
     /* object has not been marked, mark it and return its contents */
-    mem->buf[pos_index] = pos_fval | SILC_INTERNAL_POS_GC_BIT;
-    result = mem->buf + (pos_fval >> SILC_INT_POS_SHIFT);
+    mem->buf[pos_index] = pos_fval | SILC_INT_MEM_POS_GC_BIT;
+    result = mem->buf + (pos_fval >> SILC_INT_MEM_POS_SHIFT);
   }
 
   return result;
@@ -121,7 +121,7 @@ static int try_alloc(struct silc_mem_t * mem, int n, int type) {
   /* try find vacant position */
   for (int i = mem->cached_last_occupied_pos_index; i < mem->pos_count; ++i) {
     int pos_idx = (int) mem->buf[mem->last_pos_index - i];
-    if (pos_idx == SILC_INTERNAL_FREE_POS) {
+    if (pos_idx == SILC_INT_MEM_FREE_POS) {
       new_pos_index = i;
       goto LPosFound;
     }
@@ -144,7 +144,7 @@ LPosFound:
     result = new_pos_index;
 
     /* record currently available index */
-    mem->buf[mem->last_pos_index - new_pos_index] = (mem->avail_index << SILC_INT_POS_SHIFT) | type;
+    mem->buf[mem->last_pos_index - new_pos_index] = (mem->avail_index << SILC_INT_MEM_POS_SHIFT) | type;
 
     /* update position indexes counter */
     mem->pos_count = new_pos_count;
@@ -166,7 +166,7 @@ LTryAlloc:
     if (gc_attempted) {
       mem->init->oom_abort(mem->init);
     } else {
-      silc_gc(mem);
+      silc_int_mem_gc(mem);
       gc_attempted = 1;
       goto LTryAlloc;
     }
@@ -178,15 +178,15 @@ LTryAlloc:
 static void update_positions(struct silc_mem_t* mem, int pos_index, int obj_size) {
   for (int j = pos_index; j < mem->pos_count; ++j) {
     silc_obj fpos = mem->buf[mem->last_pos_index - j];
-    if (fpos == SILC_INTERNAL_FREE_POS) {
+    if (fpos == SILC_INT_MEM_FREE_POS) {
       continue; /* no need to update free position cell */
     }
 
     int type = fpos & SILC_INT_TYPE_MASK;
-    int obj_pos = fpos >> SILC_INT_POS_SHIFT;
+    int obj_pos = fpos >> SILC_INT_MEM_POS_SHIFT;
 
     /* update position */
-    mem->buf[mem->last_pos_index - j] = ((obj_pos - obj_size) << SILC_INT_POS_SHIFT) | type;
+    mem->buf[mem->last_pos_index - j] = ((obj_pos - obj_size) << SILC_INT_MEM_POS_SHIFT) | type;
   }
 }
 
@@ -195,16 +195,16 @@ static void update_positions(struct silc_mem_t* mem, int pos_index, int obj_size
 
 
 
-void silc_internal_init_mem(struct silc_mem_t* new_mem, struct silc_mem_init_t* init) {
+void silc_int_mem_init(struct silc_mem_t* new_mem, struct silc_mem_init_t* init) {
   new_mem->init = init;
   init_heap(new_mem, init);
 }
 
-void silc_internal_free_mem(struct silc_mem_t * mem) {
+void silc_int_mem_free(struct silc_mem_t * mem) {
   mem->init->free_mem(mem->buf);
 }
 
-void silc_gc(struct silc_mem_t * mem) {
+void silc_int_mem_gc(struct silc_mem_t * mem) {
   mark_root_objects(mem);
 
   /* iterate over all the available objects and compactify memory */
@@ -215,7 +215,7 @@ void silc_gc(struct silc_mem_t * mem) {
     int index_pos = mem->last_pos_index - i;
     silc_obj pos_fval = mem->buf[index_pos];
     /* is this position is free, i.e. points to nothing? */
-    if (pos_fval == SILC_INTERNAL_FREE_POS) {
+    if (pos_fval == SILC_INT_MEM_FREE_POS) {
       if (can_shrink_pos_count) {
         --mem->pos_count;
       }
@@ -223,9 +223,9 @@ void silc_gc(struct silc_mem_t * mem) {
     }
 
     /* is this position belongs to the object marked as being referenced from the GC roots? */
-    if (pos_fval & SILC_INTERNAL_POS_GC_BIT) {
+    if (pos_fval & SILC_INT_MEM_POS_GC_BIT) {
       /* reset GC bit and continue */
-      mem->buf[index_pos] &= ~SILC_INTERNAL_POS_GC_BIT;
+      mem->buf[index_pos] &= ~SILC_INT_MEM_POS_GC_BIT;
       can_shrink_pos_count = 0; /* pos_count can no longer be shrinked */
       continue;
     }
@@ -234,14 +234,14 @@ void silc_gc(struct silc_mem_t * mem) {
     int fpos = mem->buf[index_pos];
 
     /* mark position entry as free */
-    mem->buf[index_pos] = SILC_INTERNAL_FREE_POS;
+    mem->buf[index_pos] = SILC_INT_MEM_FREE_POS;
 
     if (can_shrink_pos_count) {
       --mem->pos_count; /* shrink position if possible */
     }
 
     /* calculate object size and move memory */
-    int obj_index = fpos >> SILC_INT_POS_SHIFT;
+    int obj_index = fpos >> SILC_INT_MEM_POS_SHIFT;
     silc_obj* obj_mem = mem->buf + obj_index;
     int obj_size = -1;
     switch (fpos & SILC_INT_TYPE_MASK) {
@@ -273,7 +273,7 @@ void silc_gc(struct silc_mem_t * mem) {
   }
 }
 
-void silc_calc_mem_stats(struct silc_mem_t* mem, struct silc_mem_stats_t* stats) {
+void silc_int_mem_calc_stats(struct silc_mem_t* mem, struct silc_mem_stats_t* stats) {
   stats->total_memory = mem->last_pos_index + 1;
   stats->pos_count = mem->pos_count;
   stats->usable_memory = stats->total_memory - mem->pos_count - mem->avail_index;
@@ -281,7 +281,7 @@ void silc_calc_mem_stats(struct silc_mem_t* mem, struct silc_mem_stats_t* stats)
   /* calc free memory */
   int free_pos_count = 0;
   for (int i = 0; i < mem->pos_count; ++i) {
-    if (mem->buf[mem->last_pos_index - i] == SILC_INTERNAL_FREE_POS) {
+    if (mem->buf[mem->last_pos_index - i] == SILC_INT_MEM_FREE_POS) {
       ++free_pos_count;
     }
   }
@@ -289,19 +289,15 @@ void silc_calc_mem_stats(struct silc_mem_t* mem, struct silc_mem_stats_t* stats)
   stats->free_pos_count = free_pos_count;
 }
 
-silc_obj silc_alloc_obj(struct silc_mem_t* mem,
-                        int content_length,
-                        const void* content,
-                        int type,
-                        int subtype) {
+silc_obj silc_int_mem_alloc(struct silc_mem_t* mem, int content_length, const void* content, int type, int subtype) {
   int pos_index = -1;
   silc_obj* p_layout;
 
   switch (type) {
     case SILC_TYPE_CONS:
-      assert(content_length == 2 && subtype == SILC_CONS_SUBTYPE);
+      assert(content_length == 2 && subtype == SILC_INT_MEM_CONS_SUBTYPE);
       pos_index = alloc_or_fail(mem, 2, type);
-      p_layout = mem->buf + (mem->buf[mem->last_pos_index - pos_index] >> SILC_INT_POS_SHIFT);
+      p_layout = mem->buf + (mem->buf[mem->last_pos_index - pos_index] >> SILC_INT_MEM_POS_SHIFT);
       if (content != NULL) {
         p_layout[0] = ((silc_obj *) content)[0]; /* car */
         p_layout[1] = ((silc_obj *) content)[1]; /* cdr */
@@ -314,7 +310,7 @@ silc_obj silc_alloc_obj(struct silc_mem_t* mem,
     case SILC_TYPE_OREF:
       assert(content_length > 0);
       pos_index = alloc_or_fail(mem, 2 + content_length, type);
-      p_layout = mem->buf + (mem->buf[mem->last_pos_index - pos_index] >> SILC_INT_POS_SHIFT);
+      p_layout = mem->buf + (mem->buf[mem->last_pos_index - pos_index] >> SILC_INT_MEM_POS_SHIFT);
       *p_layout++ = silc_int_to_obj(subtype);
       *p_layout++ = silc_int_to_obj(content_length);
       if (content != NULL) {
@@ -327,7 +323,7 @@ silc_obj silc_alloc_obj(struct silc_mem_t* mem,
     case SILC_TYPE_BREF:
       assert(content_length > 0);
       pos_index = alloc_or_fail(mem, 2 + silc_obj_count_from_byte_count(content_length), type);
-      p_layout = mem->buf + (mem->buf[mem->last_pos_index - pos_index] >> SILC_INT_POS_SHIFT);
+      p_layout = mem->buf + (mem->buf[mem->last_pos_index - pos_index] >> SILC_INT_MEM_POS_SHIFT);
       *p_layout++ = silc_int_to_obj(subtype);
       *p_layout++ = silc_int_to_obj(content_length);
       if (content != NULL) {

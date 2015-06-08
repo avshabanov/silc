@@ -23,15 +23,15 @@ static inline void dbg_silc_dump_heap_pos(struct silc_mem_t* mem) {
     fprintf(stderr, "\t[DBG] heap_pos[%d]=0x%08X (index=%d, gc_mark=%s, type=%d)\n",
       i,
       fpos,
-      (int) (fpos >> SILC_INT_POS_SHIFT),
-      ((fpos & SILC_INTERNAL_POS_GC_BIT) ? "yes" : "no"),
+      (int) (fpos >> SILC_INT_MEM_POS_SHIFT),
+      ((fpos & SILC_INT_MEM_POS_GC_BIT) ? "yes" : "no"),
       fpos & SILC_INT_TYPE_MASK);
   }
 }
 
 static inline void dbg_silc_dump_gc_stats(struct silc_mem_t* mem, FILE* out) {
   struct silc_mem_stats_t stats = {0};
-  silc_calc_mem_stats(mem, &stats);
+  silc_int_mem_calc_stats(mem, &stats);
 
   fprintf(out,
     ";; ====================================\n"
@@ -48,17 +48,17 @@ static inline void dbg_silc_dump_gc_stats(struct silc_mem_t* mem, FILE* out) {
   fputs(";; [DBG] Heap:\n", out);
   for (int i = 0; i < mem->pos_count; ++i) {
     silc_obj fpos = mem->buf[mem->last_pos_index - i];
-    if (fpos == SILC_INTERNAL_FREE_POS) {
+    if (fpos == SILC_INT_MEM_FREE_POS) {
       fprintf(out, ";; [DBG] heap_pos[%d]=FREE\n", i);
       continue;
     }
-    int obj_pos = (int) (fpos >> SILC_INT_POS_SHIFT);
+    int obj_pos = (int) (fpos >> SILC_INT_MEM_POS_SHIFT);
     int type = SILC_GET_TYPE(fpos);
     fprintf(out, ";; [DBG] heap_pos[%d]=0x%08X, obj_index=%d, gc_mark=%s, type=%d\n",
       i,
       fpos,
       obj_pos,
-      ((fpos & SILC_INTERNAL_POS_GC_BIT) ? "yes" : "no"),
+      ((fpos & SILC_INT_MEM_POS_GC_BIT) ? "yes" : "no"),
       type);
 
     fputs(";; [DBG] object: ", out);
