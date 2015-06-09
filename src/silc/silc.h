@@ -291,6 +291,8 @@ void silc_gc(struct silc_ctx_t* c);
 /** Tries to load contents of a given file */
 silc_obj silc_load(struct silc_ctx_t* c, const char* file_name);
 
+silc_obj silc_define_function(struct silc_ctx_t* c, silc_obj arg_list, silc_obj body);
+
 void silc_set_exit_code(struct silc_ctx_t* c, int code);
 int silc_get_exit_code(struct silc_ctx_t* c);
 

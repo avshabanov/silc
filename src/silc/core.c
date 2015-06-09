@@ -180,6 +180,7 @@ static int find_fn_pos(struct silc_ctx_t* c, silc_fn_ptr fn_ptr) {
 }
 
 #define SILC_FN_SPECIAL       (1 << 1)
+#define SILC_FN_BUILTIN       (1 << 2)
 
 static void add_function(struct silc_ctx_t* c, const char* symbol_name, silc_fn_ptr fn_ptr, bool special) {
   int fn_index = find_fn_pos(c, fn_ptr);
@@ -188,7 +189,7 @@ static void add_function(struct silc_ctx_t* c, const char* symbol_name, silc_fn_
     abort();
   }
 
-  int fn_flags = (special ? SILC_FN_SPECIAL : 0);
+  int fn_flags = (special ? SILC_FN_SPECIAL : 0) | SILC_FN_BUILTIN;
 
   /* alloc function */
   silc_obj content[] = { silc_int_to_obj(fn_index), silc_int_to_obj(fn_flags) };
@@ -257,6 +258,16 @@ int silc_get_exit_code(struct silc_ctx_t* c) {
 }
 
 silc_obj silc_load(struct silc_ctx_t* c, const char* file_name) {
+  fprintf(stdout, ";; Loading %s...\n", file_name);
+//  if (silc_try_get_err_code(o) > 0) {
+//    fprintf(stderr, ";; Error while loading %s\n", file_name);
+//    silc_print(c, o, stderr);
+//    fputc('\n', stderr);
+//  } else {
+//    fprintf(stdout, ";; Loaded %s\n", file_name);
+//  }
+  fprintf(stderr, ";; Error while loading %s: \n", file_name);
+
   /* TODO: implement */
   return silc_err_from_code(SILC_ERR_INTERNAL);
 }
@@ -388,6 +399,45 @@ silc_obj silc_eq(struct silc_ctx_t* c, silc_obj lhs, silc_obj rhs) {
 
 int silc_get_ref_subtype(struct silc_ctx_t* c, silc_obj o) {
   return silc_int_mem_parse_ref(c->mem, o, NULL, NULL, NULL);
+}
+
+silc_obj silc_define_function(struct silc_ctx_t* c, silc_obj arg_list, silc_obj body) {
+  if (SILC_GET_TYPE(arg_list) != SILC_TYPE_CONS) {
+    return silc_err_from_code(SILC_ERR_INVALID_ARGS);
+  }
+
+  silc_obj content[35] = { silc_int_to_obj(-1), SILC_OBJ_ZERO, body };
+  int count = 3;
+
+  silc_obj cdr = arg_list;
+  for (;;) {
+    if (cdr == SILC_OBJ_NIL) {
+      break;
+    }
+
+    if (SILC_GET_TYPE(cdr) != SILC_TYPE_CONS) {
+      return silc_err_from_code(SILC_ERR_INVALID_ARGS);
+    }
+
+    silc_obj* cdr_contents = silc_parse_cons(c->mem, cdr);
+    silc_obj car = cdr_contents[0];
+    cdr = cdr_contents[1];
+
+    int new_count = count + 1;
+    if (new_count >= countof(content)) {
+      return silc_err_from_code(SILC_ERR_INVALID_ARGS);
+    }
+
+    if (silc_get_ref_subtype(c, car) != SILC_OREF_SYMBOL_SUBTYPE) {
+      return silc_err_from_code(SILC_ERR_INVALID_ARGS);
+    }
+
+    content[count] = car;
+    count = new_count;
+  }
+
+  /* alloc function */
+  return silc_int_mem_alloc(c->mem, count, content, SILC_TYPE_OREF, SILC_OREF_FUNCTION_SUBTYPE);
 }
 
 /*

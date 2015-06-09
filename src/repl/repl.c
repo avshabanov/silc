@@ -7,16 +7,7 @@ int main(int argc, const char** argv) {
 
   /* load scripts */
   for (int i = 1; i < argc; ++i) {
-    const char* file_name = argv[i];
-    fprintf(stdout, ";; Loading %s...\n", file_name);
-    silc_obj o = silc_load(c, file_name);
-    if (silc_try_get_err_code(o) > 0) {
-      fprintf(stderr, ";; Error while loading %s\n", file_name);
-      silc_print(c, o, stderr);
-      fputc('\n', stderr);
-    } else {
-      fprintf(stdout, ";; Loaded %s\n", file_name);
-    }
+    silc_load(c, argv[i]);
   }
 
   silc_obj eof = silc_err_from_code(1000); /* custom error code that will indicate an end of input */
@@ -46,7 +37,7 @@ int main(int argc, const char** argv) {
       break; /* not an error code, indication of termination */
     }
 
-    fprintf(stderr, ";; error: %s\n", silc_err_code_to_str(error_code));
+    fprintf(stderr, ";; Error: %s\n", silc_err_code_to_str(error_code));
   }
 
   /* get exit code and free context */

@@ -20,6 +20,29 @@
     return silc_err_from_code(SILC_ERR_INVALID_ARGS); \
   }
 
+silc_obj silc_internal_fn_define(struct silc_funcall_t* f) {
+  EXPECT_ARG_COUNT(f, 2);
+
+  silc_obj arg_name;
+  silc_obj arg_val;
+  SILC_CHECKED_SET(arg_name, f->argv[0]);
+  SILC_CHECKED_SET(arg_val, silc_eval(f->ctx, f->argv[1]));
+
+  silc_set_sym_assoc(f->ctx, arg_name, arg_val);
+  return arg_val;
+}
+
+silc_obj silc_internal_fn_lambda(struct silc_funcall_t* f) {
+  if (f->argc < 1 || f->argc > 2) {
+    return silc_err_from_code(SILC_ERR_INVALID_ARGS);
+  }
+  silc_obj body = SILC_OBJ_NIL;
+  if (f->argc == 2) {
+    SILC_CHECKED_SET(body, f->argv[1]);
+  }
+  return silc_define_function(f->ctx, f->argv[0], body);
+}
+
 silc_obj silc_internal_fn_print(struct silc_funcall_t* f) {
   EXPECT_ARG_COUNT(f, 1);
 
