@@ -95,14 +95,15 @@ silc_obj silc_internal_fn_inc(struct silc_funcall_t* f) {
 }
 
 silc_obj silc_internal_fn_load(struct silc_funcall_t* f) {
-  fputs(";; load is not implemented yet\n", stderr);
+  fputs(";; [ERROR] load is not implemented yet\n", silc_get_default_out(f->ctx));
   return silc_err_from_code(SILC_ERR_INTERNAL);
 }
 
 silc_obj silc_internal_fn_gc(struct silc_funcall_t* f) {
-  fputs(";; starting garbage collection...\n", stdout);
+  FILE* out = silc_get_default_out(f->ctx);
+  fputs(";; starting garbage collection...\n", out);
   silc_gc(f->ctx);
-  fputs(";; garbage collected.\n", stdout);
+  fputs(";; garbage collected.\n", out);
   return SILC_OBJ_NIL;
 }
 
@@ -115,4 +116,12 @@ silc_obj silc_internal_fn_quit(struct silc_funcall_t* f) {
     }
   }
   return silc_err_from_code(SILC_ERR_QUIT);
+}
+
+silc_obj silc_internal_fn_begin(struct silc_funcall_t* f) {
+  if (f->argc == 0) {
+    return SILC_OBJ_NIL;
+  }
+
+  return f->argv[f->argc - 1];
 }

@@ -170,6 +170,7 @@ static silc_fn_ptr g_silc_builtin_functions[] = {
   &silc_internal_fn_print,
   &silc_internal_fn_inc,
   &silc_internal_fn_plus,
+  &silc_internal_fn_begin,
   &silc_internal_fn_quit
 };
 
@@ -218,6 +219,8 @@ static void init_builtins(struct silc_ctx_t* c) {
 
   add_function(c, "define", &silc_internal_fn_define, true);
   add_function(c, "lambda", &silc_internal_fn_lambda, true);
+
+  add_function(c, "begin", &silc_internal_fn_begin, false);
 
   add_function(c, "quit", &silc_internal_fn_quit, false);
 }

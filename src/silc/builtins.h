@@ -30,3 +30,5 @@ silc_obj silc_internal_fn_load(struct silc_funcall_t* f);
 silc_obj silc_internal_fn_gc(struct silc_funcall_t* f);
 
 silc_obj silc_internal_fn_quit(struct silc_funcall_t* f);
+
+silc_obj silc_internal_fn_begin(struct silc_funcall_t* f);

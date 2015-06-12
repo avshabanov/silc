@@ -42,8 +42,10 @@ static void assert_eval_result(struct silc_ctx_t* c, const char* input, const ch
   /* Then: */
   silc_print(c, result, in);
   READ_BUF(in, buf);
-  //fprintf(stderr, "actual_result=%s\n", buf);
-  assert(0 == strcmp(buf, expected_eval_result));
+  if (0 != strcmp(buf, expected_eval_result)) {
+    fprintf(stderr, "[eval] actual_result=%s, expected_result=%s\n", buf, expected_eval_result);
+    assert(!"results are not matching");
+  }
 }
 
 BEGIN_TEST_METHOD(test_eval_inline)
@@ -70,12 +72,33 @@ BEGIN_TEST_METHOD(test_eval_nested_addition)
   silc_free_context(c);
 END_TEST_METHOD()
 
+BEGIN_TEST_METHOD(test_eval_define)
+  struct silc_ctx_t* c = silc_new_context();
+  assert_eval_result(c, "(define b (+ 2 (inc 1)))", "4");
+  silc_free_context(c);
+END_TEST_METHOD()
+
+BEGIN_TEST_METHOD(test_eval_begin)
+  struct silc_ctx_t* c = silc_new_context();
+  assert_eval_result(c, "(begin 1 2 (+ 3 1))", "4");
+  silc_free_context(c);
+END_TEST_METHOD()
+
+BEGIN_TEST_METHOD(test_eval_multi_define)
+  struct silc_ctx_t* c = silc_new_context();
+  assert_eval_result(c, "(begin (define b (+ 2 (inc 1))) (define a 1) (+ a b))", "5");
+  silc_free_context(c);
+END_TEST_METHOD()
+
 int main(int argc, char** argv) {
   TESTS_STARTED();
   test_eval_inline();
   test_eval_empty_cons();
   test_eval_inc();
   test_eval_nested_addition();
+  test_eval_define();
+  test_eval_begin();
+  test_eval_multi_define();
   TESTS_SUCCEEDED();
   return 0;
 }
