@@ -164,6 +164,9 @@ static void init_globals(struct silc_ctx_t* c) {
 }
 
 static silc_fn_ptr g_silc_builtin_functions[] = {
+  &silc_internal_fn_load,
+  &silc_internal_fn_define,
+  &silc_internal_fn_lambda,
   &silc_internal_fn_print,
   &silc_internal_fn_inc,
   &silc_internal_fn_plus,
@@ -210,6 +213,11 @@ static void init_builtins(struct silc_ctx_t* c) {
   add_function(c, "+", &silc_internal_fn_plus, false);
 
   add_function(c, "print", &silc_internal_fn_print, false);
+
+  add_function(c, "load", &silc_internal_fn_load, false);
+
+  add_function(c, "define", &silc_internal_fn_define, true);
+  add_function(c, "lambda", &silc_internal_fn_lambda, true);
 
   add_function(c, "quit", &silc_internal_fn_quit, false);
 }
@@ -497,7 +505,7 @@ static int compare_str(struct silc_ctx_t* c, silc_obj str, const char* buf, int 
 
   return memcmp(buf, char_content, size);
 }
- 
+
 static int is_same_sym_str(struct silc_ctx_t* c, silc_obj sym, const char* buf, int size, silc_obj hash_code) {
   silc_obj sym_str = SILC_OBJ_NIL;
   silc_obj sym_hash_code = SILC_OBJ_ZERO;
@@ -518,14 +526,14 @@ silc_obj silc_sym_from_buf(struct silc_ctx_t* c, const char* buf, int size) {
   assert(hash_table_subtype == SILC_OREF_HASHTABLE_SUBTYPE && hash_table_size > 0 && hash_table_contents != NULL);
 
   int hash_table_count = silc_obj_to_int(hash_table_contents[0]);
-  silc_obj* hash_table = hash_table_contents + 1;
 
   /* lookup and optional insert */
   silc_obj hash_code_obj = str_hash_code(buf, size);
-  int pos = silc_obj_to_int(hash_code_obj) % hash_table_size;
+  int pos_modulo = hash_table_size - 1; // here and below: 1 is a service information size
+  int pos = 1 + (((silc_obj_to_int(hash_code_obj) % pos_modulo) + pos_modulo) % pos_modulo);
 
   silc_obj* pc = NULL;
-  silc_obj hash_table_cell = hash_table[pos];
+  silc_obj hash_table_cell = hash_table_contents[pos];
   for (silc_obj cell = hash_table_cell; cell != SILC_OBJ_NIL; cell = pc[1]) {
     pc = silc_parse_cons(c->mem, cell); /* go to next */
     silc_obj other_sym = pc[0];
@@ -543,9 +551,10 @@ silc_obj silc_sym_from_buf(struct silc_ctx_t* c, const char* buf, int size) {
   silc_obj result = silc_int_mem_alloc(c->mem, 3, contents, SILC_TYPE_OREF, SILC_OREF_SYMBOL_SUBTYPE);
 
   /* insert that entry to the hash table */
-  hash_table[pos] = silc_cons(c, result, hash_table_cell);
+  hash_table_contents[pos] = silc_cons(c, result, hash_table_cell);
+
   /* update count */
-  hash_table[0] = silc_int_to_obj(hash_table_count + 1);
+  hash_table_contents[0] = silc_int_to_obj(hash_table_count + 1);
 
   return result;
 }
@@ -650,6 +659,30 @@ static silc_obj push_arguments(struct silc_ctx_t* c, silc_obj cdr, bool special_
   return SILC_OBJ_NIL;
 }
 
+static silc_obj call_builtin(struct silc_ctx_t* c, silc_obj* cons_contents, silc_obj* fn_contents,
+                             int prev_end, bool special) {
+  /* put arguments to the function stack */
+  silc_obj result = push_arguments(c, cons_contents[1], special);
+  if (silc_try_get_err_code(result) < 0) {
+    int fn_pos = silc_obj_to_int(fn_contents[0]);
+    assert(fn_pos >= 0 && fn_pos < c->fn_count);
+    silc_fn_ptr fn_ptr = c->fn_array[fn_pos];
+
+    /* ok, now prepare function call context */
+    struct silc_funcall_t funcall = {
+      .ctx = c,
+      .argc = c->stack_end - prev_end,
+      .argv = c->stack + prev_end
+    };
+    assert(funcall.argc >= 0);
+
+    /* call that function */
+    result = fn_ptr(&funcall);
+  }
+
+  return result;
+}
+
 static silc_obj eval_cons(struct silc_ctx_t* c, silc_obj cons) {
   /* Parse cons */
   silc_obj* cons_contents = silc_parse_cons(c->mem, cons);
@@ -666,27 +699,15 @@ static silc_obj eval_cons(struct silc_ctx_t* c, silc_obj cons) {
   }
 
   /* parse function */
-  int fn_pos = silc_obj_to_int(fn_contents[0]);
   int fn_flags = silc_obj_to_int(fn_contents[1]);
-  assert(fn_pos >= 0 && fn_pos < c->fn_count);
-  silc_fn_ptr fn_ptr = c->fn_array[fn_pos];
 
   /* save stack state */
   int prev_end = c->stack_end;
-
-  /* put arguments to the function stack */
-  silc_obj result = push_arguments(c, cons_contents[1], fn_flags & SILC_FN_SPECIAL);
-  if (silc_try_get_err_code(result) < 0) {
-    /* ok, now prepare function call context */
-    struct silc_funcall_t funcall = {
-      .ctx = c,
-      .argc = c->stack_end - prev_end,
-      .argv = c->stack + prev_end
-    };
-    assert(funcall.argc >= 0);
-
-    /* call that function */
-    result = fn_ptr(&funcall);
+  silc_obj result;
+  if (fn_flags & SILC_FN_BUILTIN) {
+    result = call_builtin(c, cons_contents, fn_contents, prev_end, fn_flags & SILC_FN_SPECIAL);
+  } else {
+    assert(!"not implemented");
   }
 
   /* Restore stack state */

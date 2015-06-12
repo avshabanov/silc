@@ -7,7 +7,7 @@ LFLAGS      = -lm
 
 
 # Debug Options
-CFLAGS      += -O1 -g
+CFLAGS      += -O0 -g
 LFLAGS      += -g
 
 # Release Options

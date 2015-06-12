@@ -184,6 +184,9 @@ static inline int silc_int_mem_parse_ref(struct silc_mem_t* mem, silc_obj obj, i
     case SILC_TYPE_BREF:
       pch = (char*) (silc_int_mem_get_ref(mem, obj, &subtype, content_len) + 2);
       break;
+
+    default:
+      assert(!"unknown reference type");
   }
 
   if (char_content != NULL) {
