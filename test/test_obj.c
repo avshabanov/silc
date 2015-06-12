@@ -44,7 +44,7 @@ BEGIN_TEST_METHOD(test_sym_create)
   char buf[10];
 
   /* create N symbols */
-  silc_obj syms[4096];
+  silc_obj syms[16500];
   for (size_t n = 0; n < countof(syms); ++n) {
     size_t sz = (size_t) sprintf(buf, "s%zu", n);
     syms[n] = silc_sym_from_buf(c, buf, sz);
