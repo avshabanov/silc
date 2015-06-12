@@ -38,7 +38,7 @@ typedef unsigned int silc_obj;
  *  <li>SILC_TYPE_BREF</li>
  * </ul>
  */
-#define SILC_INT_TYPE_SHIFT           (3)
+#define SILC_INT_TYPE_SHIFT           (2)
 #define SILC_INT_TYPE_MASK            ((1 << SILC_INT_TYPE_SHIFT) - 1)
 
 /**
