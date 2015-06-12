@@ -412,20 +412,44 @@ int silc_get_ref_subtype(struct silc_ctx_t* c, silc_obj o) {
   return silc_int_mem_parse_ref(c->mem, o, NULL, NULL, NULL);
 }
 
-silc_obj silc_define_function(struct silc_ctx_t* c, silc_obj arg_list, silc_obj body) {
-  if (SILC_GET_TYPE(arg_list) != SILC_TYPE_CONS) {
-    return silc_err_from_code(SILC_ERR_INVALID_ARGS);
-  }
-
-  silc_obj content[35] = { silc_int_to_obj(-1), SILC_OBJ_ZERO, body };
-  int count = 3;
-
-  silc_obj cdr = arg_list;
+static int cons_size(struct silc_ctx_t* c, silc_obj cons) {
+  silc_obj cdr = cons;
+  int count = 0;
   for (;;) {
     if (cdr == SILC_OBJ_NIL) {
       break;
     }
 
+    if (SILC_GET_TYPE(cdr) != SILC_TYPE_CONS) {
+      ++count;
+      break;
+    }
+
+    silc_obj* cdr_contents = silc_parse_cons(c->mem, cdr);
+    ++count;
+    cdr = cdr_contents[1];
+  }
+  return count;
+}
+
+silc_obj silc_define_function(struct silc_ctx_t* c, silc_obj arg_list, silc_obj body) {
+  if (SILC_GET_TYPE(arg_list) != SILC_TYPE_CONS || arg_list != SILC_OBJ_NIL) {
+    return silc_err_from_code(SILC_ERR_INVALID_ARGS);
+  }
+
+  silc_obj result = silc_int_mem_alloc(c->mem, 3 + cons_size(c, arg_list), NULL,
+    SILC_TYPE_OREF, SILC_OREF_FUNCTION_SUBTYPE);
+
+  silc_obj* content = NULL;
+  silc_int_mem_parse_ref(c->mem, result, NULL, NULL, &content);
+  assert(content != NULL);
+
+  content[0] = silc_int_to_obj(-1); /* function index */
+  content[1] = SILC_OBJ_ZERO; /* flags */
+  content[2] = body; /* flags */
+
+  silc_obj cdr = arg_list;
+  for (int pos = 0; cdr != SILC_OBJ_NIL; ++pos) {
     if (SILC_GET_TYPE(cdr) != SILC_TYPE_CONS) {
       return silc_err_from_code(SILC_ERR_INVALID_ARGS);
     }
@@ -434,21 +458,15 @@ silc_obj silc_define_function(struct silc_ctx_t* c, silc_obj arg_list, silc_obj 
     silc_obj car = cdr_contents[0];
     cdr = cdr_contents[1];
 
-    int new_count = count + 1;
-    if (new_count >= countof(content)) {
-      return silc_err_from_code(SILC_ERR_INVALID_ARGS);
-    }
-
     if (silc_get_ref_subtype(c, car) != SILC_OREF_SYMBOL_SUBTYPE) {
       return silc_err_from_code(SILC_ERR_INVALID_ARGS);
     }
 
-    content[count] = car;
-    count = new_count;
+    content[pos + 3] = car; /* put symbol to the appropriate position */
   }
 
   /* alloc function */
-  return silc_int_mem_alloc(c->mem, count, content, SILC_TYPE_OREF, SILC_OREF_FUNCTION_SUBTYPE);
+  return result;
 }
 
 /*
@@ -662,8 +680,10 @@ static silc_obj push_arguments(struct silc_ctx_t* c, silc_obj cdr, bool special_
   return SILC_OBJ_NIL;
 }
 
-static silc_obj call_builtin(struct silc_ctx_t* c, silc_obj* cons_contents, silc_obj* fn_contents,
-                             int prev_end, bool special) {
+static silc_obj call_builtin(struct silc_ctx_t* c, silc_obj* cons_contents, silc_obj* fn_contents, bool special) {
+  /* save stack state */
+  int prev_end = c->stack_end;
+
   /* put arguments to the function stack */
   silc_obj result = push_arguments(c, cons_contents[1], special);
   if (silc_try_get_err_code(result) < 0) {
@@ -681,6 +701,50 @@ static silc_obj call_builtin(struct silc_ctx_t* c, silc_obj* cons_contents, silc
 
     /* call that function */
     result = fn_ptr(&funcall);
+  }
+
+  /* Restore stack state */
+  c->stack_end = prev_end;
+
+  return result;
+}
+
+static silc_obj call_lambda(struct silc_ctx_t* c, silc_obj* cons_contents, silc_obj* fn_contents, int len) {
+  silc_obj args[30];
+  assert(len >= 3);
+
+  /* save args */
+  for (int i = 3; i < len; ++i) {
+    args[i - 3] = silc_get_sym_info(c, fn_contents[i], NULL);
+  }
+
+  /* assoc args */
+  silc_obj cdr = cons_contents[1];
+  silc_obj result;
+  for (int i = 3; i < len; ++i) {
+    if (cdr == SILC_OBJ_NIL) {
+      return silc_err_from_code(SILC_ERR_INVALID_ARGS); /* invalid number of args */
+    }
+
+    cons_contents = silc_parse_cons(c->mem, cdr);
+    silc_obj car = cons_contents[0];
+    cdr = cons_contents[1];
+
+    silc_obj eval_arg = silc_eval(c, car);
+    if (silc_try_get_err_code(eval_arg) >= 0) {
+      result = eval_arg;
+      goto LRestoreAssoc;
+    }
+    silc_set_sym_assoc(c, fn_contents[i], eval_arg);
+  }
+
+  /* eval function body */
+  result = silc_eval(c, fn_contents[2]);
+
+LRestoreAssoc:
+  /* restore args */
+  for (int i = 3; i < len; ++i) {
+    silc_set_sym_assoc(c, fn_contents[i], args[i - 3]);
   }
 
   return result;
@@ -704,17 +768,13 @@ static silc_obj eval_cons(struct silc_ctx_t* c, silc_obj cons) {
   /* parse function */
   int fn_flags = silc_obj_to_int(fn_contents[1]);
 
-  /* save stack state */
-  int prev_end = c->stack_end;
   silc_obj result;
   if (fn_flags & SILC_FN_BUILTIN) {
-    result = call_builtin(c, cons_contents, fn_contents, prev_end, fn_flags & SILC_FN_SPECIAL);
+    result = call_builtin(c, cons_contents, fn_contents, fn_flags & SILC_FN_SPECIAL);
   } else {
-    assert(!"not implemented");
+    /* TODO: merge code */
+    result = call_lambda(c, cons_contents, fn_contents, len);
   }
-
-  /* Restore stack state */
-  c->stack_end = prev_end;
 
   return result;
 }
