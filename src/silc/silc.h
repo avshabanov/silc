@@ -25,7 +25,7 @@ extern "C" {
 #ifdef NDEBUG
 #define SILC_ASSERT(x)      ((void) (x))
 #else
-#define SILC_ASSERT         SILC_ASSERT
+#define SILC_ASSERT         assert
 #endif /* /NDEBUG */
 
 /* Base declarations */

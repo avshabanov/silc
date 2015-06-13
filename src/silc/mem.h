@@ -204,6 +204,6 @@ static inline silc_obj* silc_parse_cons(struct silc_mem_t* mem, silc_obj obj) {
   int content_length = 0;
   silc_obj* result = NULL;
   int subtype = silc_int_mem_parse_ref(mem, obj, &content_length, NULL, &result);
-  SILC_ASSERT(result != NULL & content_length == 2 && subtype == SILC_INT_MEM_CONS_SUBTYPE);
+  SILC_ASSERT(result != NULL && content_length == 2 && subtype == SILC_INT_MEM_CONS_SUBTYPE);
   return result;
 }

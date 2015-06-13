@@ -15,7 +15,7 @@
 #include "silc.h"
 
 static void print_unknown(struct silc_ctx_t* c, silc_obj o, FILE* out) {
-  fprintf(out, "<Unknown#%p:%X>", c, o);
+  fprintf(out, "<Unknown#%p:%X>", (void*) c, o);
 }
 
 static void print_inl(struct silc_ctx_t* c, silc_obj o, FILE* out) {

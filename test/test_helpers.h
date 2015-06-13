@@ -1,7 +1,6 @@
 #pragma once
 
 #include "silc.h"
-#include <ASSERT.h>
 #include <string.h>
 
 #include "test.h"
