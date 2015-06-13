@@ -1,4 +1,4 @@
-
+include ../../target/config.mk
 include ../../silc.mk
 
 CFLAGS += -I../silc

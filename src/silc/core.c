@@ -22,18 +22,35 @@
 #include "mem.h"
 #include "builtins.h"
 
-/* Helper macros */
+
+/******************************************************************************* 
+ * Helper macros                                                               *
+ *******************************************************************************/
 
 #ifndef countof
 #define countof(arr)    (sizeof(arr) / sizeof(arr[0]))
 #endif
 
+/******************************************************************************* 
+ * Forward declarations                                                        *
+ *******************************************************************************/
 
-/* Forward declarations */
 
-#include "silc.h"
+/* Mem management */
+static void * xmalloc(size_t size);
+static void * xmallocz(size_t size);
+static inline void xfree(void * p);
+ 
+/* Object allocation */
+static silc_obj silc_hash_table(struct silc_ctx_t* c, int initial_size);
 
-/* Struct declarations */
+
+
+/******************************************************************************* 
+ * Types                                                                       *
+ *******************************************************************************/
+
+
 struct silc_mem_init_t;
 struct silc_mem_t;
 
@@ -67,7 +84,6 @@ struct silc_settings_t {
   FILE *    out;        /* default output stream (used in print function) */
 };
 
-static silc_obj silc_hash_table(struct silc_ctx_t* c, int initial_size);
 
 /* Low-level mem alloc functions */
 
@@ -433,7 +449,8 @@ static int cons_size(struct silc_ctx_t* c, silc_obj cons) {
 }
 
 silc_obj silc_define_function(struct silc_ctx_t* c, silc_obj arg_list, silc_obj body) {
-  if (SILC_GET_TYPE(arg_list) != SILC_TYPE_CONS || arg_list != SILC_OBJ_NIL) {
+  if (SILC_GET_TYPE(arg_list) != SILC_TYPE_CONS && arg_list != SILC_OBJ_NIL) {
+    fputs("[DBG] arg_list - wrong type\n", stderr);
     return silc_err_from_code(SILC_ERR_INVALID_ARGS);
   }
 
@@ -451,6 +468,7 @@ silc_obj silc_define_function(struct silc_ctx_t* c, silc_obj arg_list, silc_obj 
   silc_obj cdr = arg_list;
   for (int pos = 0; cdr != SILC_OBJ_NIL; ++pos) {
     if (SILC_GET_TYPE(cdr) != SILC_TYPE_CONS) {
+      fputs("[DBG] cdr - wrong type\n", stderr);
       return silc_err_from_code(SILC_ERR_INVALID_ARGS);
     }
 
@@ -459,6 +477,7 @@ silc_obj silc_define_function(struct silc_ctx_t* c, silc_obj arg_list, silc_obj 
     cdr = cdr_contents[1];
 
     if (silc_get_ref_subtype(c, car) != SILC_OREF_SYMBOL_SUBTYPE) {
+      fputs("[DBG] car is not a sym\n", stderr);
       return silc_err_from_code(SILC_ERR_INVALID_ARGS);
     }
 
@@ -479,12 +498,12 @@ static silc_obj silc_hash_table(struct silc_ctx_t* c, int initial_size) {
   return result;
 }
 
-static inline silc_obj str_hash_code(const char* buf, int size) {
+static inline int calc_hash_code(const char* buf, int size, int modulo) {
   int result = 0;
   for (int i = 0; i < size; ++i) {
     result = 31 * result + buf[i];
   }
-  return silc_int_to_obj(result % SILC_MAX_INT);
+  return ((result % modulo) + modulo) % modulo;
 }
 
 /* Sym */
@@ -549,9 +568,12 @@ silc_obj silc_sym_from_buf(struct silc_ctx_t* c, const char* buf, int size) {
   int hash_table_count = silc_obj_to_int(hash_table_contents[0]);
 
   /* lookup and optional insert */
-  silc_obj hash_code_obj = str_hash_code(buf, size);
+  int hash_code = calc_hash_code(buf, size, SILC_MAX_INT);
+  assert((hash_code >= 0) && (hash_code < SILC_MAX_INT));
+  
   int pos_modulo = hash_table_size - 1; // here and below: 1 is a service information size
-  int pos = 1 + (((silc_obj_to_int(hash_code_obj) % pos_modulo) + pos_modulo) % pos_modulo);
+  int pos = 1 + (hash_code % pos_modulo);
+  silc_obj hash_code_obj = silc_int_to_obj(hash_code);
 
   silc_obj* pc = NULL;
   silc_obj hash_table_cell = hash_table_contents[pos];

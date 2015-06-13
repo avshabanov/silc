@@ -90,6 +90,24 @@ BEGIN_TEST_METHOD(test_eval_multi_define)
   silc_free_context(c);
 END_TEST_METHOD()
 
+BEGIN_TEST_METHOD(test_eval_empty_lambda)
+  struct silc_ctx_t* c = silc_new_context();
+  assert_eval_result(c, "((lambda ()))", "nil");
+  silc_free_context(c);
+END_TEST_METHOD()
+
+BEGIN_TEST_METHOD(test_eval_ret1_lambda)
+  struct silc_ctx_t* c = silc_new_context();
+  assert_eval_result(c, "((lambda () 1))", "1");
+  silc_free_context(c);
+END_TEST_METHOD()
+
+BEGIN_TEST_METHOD(test_eval_argval_lambda)
+  struct silc_ctx_t* c = silc_new_context();
+  assert_eval_result(c, "((lambda (a) (inc a)) 1)", "2");
+  silc_free_context(c);
+END_TEST_METHOD()
+
 int main(int argc, char** argv) {
   TESTS_STARTED();
   test_eval_inline();
@@ -99,6 +117,9 @@ int main(int argc, char** argv) {
   test_eval_define();
   test_eval_begin();
   test_eval_multi_define();
+  test_eval_empty_lambda();
+  test_eval_ret1_lambda();
+  test_eval_argval_lambda();
   TESTS_SUCCEEDED();
   return 0;
 }
