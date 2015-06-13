@@ -20,7 +20,7 @@
 
 /** How big silc_obj array should be to fit byte_count bytes? */
 static inline int silc_obj_count_from_byte_count(int byte_count) {
-  assert(byte_count >= 0);
+  SILC_ASSERT(byte_count >= 0);
   return ((byte_count + sizeof(silc_obj) - 1) / sizeof(silc_obj));
 }
 
@@ -295,7 +295,7 @@ silc_obj silc_int_mem_alloc(struct silc_mem_t* mem, int content_length, const vo
 
   switch (type) {
     case SILC_TYPE_CONS:
-      assert(content_length == 2 && subtype == SILC_INT_MEM_CONS_SUBTYPE);
+      SILC_ASSERT(content_length == 2 && subtype == SILC_INT_MEM_CONS_SUBTYPE);
       pos_index = alloc_or_fail(mem, 2, type);
       p_layout = mem->buf + (mem->buf[mem->last_pos_index - pos_index] >> SILC_INT_MEM_POS_SHIFT);
       if (content != NULL) {
@@ -308,7 +308,7 @@ silc_obj silc_int_mem_alloc(struct silc_mem_t* mem, int content_length, const vo
       break;
 
     case SILC_TYPE_OREF:
-      assert(content_length > 0);
+      SILC_ASSERT(content_length > 0);
       pos_index = alloc_or_fail(mem, 2 + content_length, type);
       p_layout = mem->buf + (mem->buf[mem->last_pos_index - pos_index] >> SILC_INT_MEM_POS_SHIFT);
       *p_layout++ = silc_int_to_obj(subtype);
@@ -321,7 +321,7 @@ silc_obj silc_int_mem_alloc(struct silc_mem_t* mem, int content_length, const vo
       break;
 
     case SILC_TYPE_BREF:
-      assert(content_length > 0);
+      SILC_ASSERT(content_length > 0);
       pos_index = alloc_or_fail(mem, 2 + silc_obj_count_from_byte_count(content_length), type);
       p_layout = mem->buf + (mem->buf[mem->last_pos_index - pos_index] >> SILC_INT_MEM_POS_SHIFT);
       *p_layout++ = silc_int_to_obj(subtype);
@@ -334,7 +334,7 @@ silc_obj silc_int_mem_alloc(struct silc_mem_t* mem, int content_length, const vo
       break;
 
     default:
-      assert(!"Unknown object type");
+      SILC_ASSERT(!"Unknown object type");
   }
 
   return pos_index < 0 ? SILC_OBJ_NIL : ((((silc_obj) pos_index) << SILC_INT_TYPE_SHIFT) | type);

@@ -9,7 +9,7 @@ It features moveable garbage collector and is perfect for use in a constrained e
 
 ## How to build
 
-Execute ``make all`` in the root dir.
+Execute ``./configure && make repl`` in the root dir.
 
 Then do:
 
@@ -32,6 +32,10 @@ Sample session log:
 nil
 ? true
 true
+? (define foo (lambda (a b) (+ a b 1000)))
+#<CLOSURE>
+? (foo 1 2)
+1003
 ? (quit)
 
 ;; Exiting... Good bye!

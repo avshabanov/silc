@@ -22,6 +22,12 @@
 extern "C" {
 #endif
 
+#ifdef NDEBUG
+#define SILC_ASSERT(x)      ((void) (x))
+#else
+#define SILC_ASSERT         SILC_ASSERT
+#endif /* /NDEBUG */
+
 /* Base declarations */
 
 typedef unsigned int silc_obj;
@@ -142,7 +148,7 @@ const char* silc_err_code_to_str(int code);
 #define SILC_MAX_ERR_CODE             ((1<<(SILC_INL_INL_CONTENT_BITS)) - 1)
 
 static inline silc_obj silc_err_from_code(int err_code) {
-  assert(err_code > 0 && err_code < SILC_MAX_ERR_CODE);
+  SILC_ASSERT(err_code > 0 && err_code < SILC_MAX_ERR_CODE);
   return SILC_MAKE_INL_OBJECT(err_code, SILC_INL_SUBTYPE_ERR);
 }
 
@@ -273,7 +279,7 @@ static inline silc_obj silc_int_to_obj(int val) {
 }
 
 static inline int silc_obj_to_int(silc_obj o) {
-  assert((SILC_GET_TYPE(o) == SILC_TYPE_INL) && (SILC_GET_INL_SUBTYPE(o) == SILC_INL_SUBTYPE_INT));
+  SILC_ASSERT((SILC_GET_TYPE(o) == SILC_TYPE_INL) && (SILC_GET_INL_SUBTYPE(o) == SILC_INL_SUBTYPE_INT));
 
   int val = SILC_GET_INL_CONTENT(o);
   if (val & SILC_INT_SIGN_BIT) {

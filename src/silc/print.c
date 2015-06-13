@@ -49,7 +49,7 @@ static void print_inl(struct silc_ctx_t* c, silc_obj o, FILE* out) {
     case SILC_INL_SUBTYPE_ERR:
       {
         int code = silc_try_get_err_code(o);
-        assert(code > 0);
+        SILC_ASSERT(code > 0);
         fprintf(stderr, ";; error %d: %s\n", code, silc_err_code_to_str(code));
       }
       break;

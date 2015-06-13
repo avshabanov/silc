@@ -37,7 +37,7 @@ BEGIN_TEST_METHOD(test_print_primitives)
 
   /* Test contents */
   READ_BUF(out, buf);
-  assert(0 == strcmp(buf, "false;true;0;1;-1;"));
+  ASSERT(0 == strcmp(buf, "false;true;0;1;-1;"));
 
   silc_free_context(c);
 END_TEST_METHOD()
@@ -50,7 +50,7 @@ BEGIN_TEST_METHOD(test_print_small_symbol)
 
   /* Test contents */
   READ_BUF(out, buf);
-  assert(0 == strcmp(buf, sym_str));
+  ASSERT(0 == strcmp(buf, sym_str));
 
   silc_free_context(c);
 END_TEST_METHOD()
@@ -63,7 +63,7 @@ BEGIN_TEST_METHOD(test_print_large_symbol)
 
   /* Test contents */
   READ_BUF(out, buf);
-  assert(0 == strcmp(buf, sym_str));
+  ASSERT(0 == strcmp(buf, sym_str));
 
   silc_free_context(c);
 END_TEST_METHOD()
@@ -80,7 +80,7 @@ BEGIN_TEST_METHOD(test_print_cons_primitive)
 
   /* Test contents */
   READ_BUF(out, buf);
-  assert(0 == strcmp(buf, "(1 2 3)"));
+  ASSERT(0 == strcmp(buf, "(1 2 3)"));
 
   silc_free_context(c);
 END_TEST_METHOD()
@@ -98,7 +98,7 @@ BEGIN_TEST_METHOD(test_print_cons_nested)
 
   /* Test contents */
   READ_BUF(out, buf);
-  assert(0 == strcmp(buf, "(1 false nil (true))"));
+  ASSERT(0 == strcmp(buf, "(1 false nil (true))"));
 
   silc_free_context(c);
 END_TEST_METHOD()

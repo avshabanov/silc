@@ -130,13 +130,13 @@ silc_obj silc_int_mem_alloc(struct silc_mem_t* mem, int content_length, const vo
 
 static inline int silc_int_mem_get_pos_index(struct silc_mem_t* mem, silc_obj obj) {
   int index_offset = (int) (obj >> SILC_INT_TYPE_SHIFT);
-  assert(index_offset >= 0 && index_offset < mem->pos_count);
+  SILC_ASSERT(index_offset >= 0 && index_offset < mem->pos_count);
   return mem->last_pos_index - index_offset;
 }
 
 static inline silc_obj* silc_int_mem_get_contents(struct silc_mem_t* mem, silc_obj obj) {
   int pos = (int) (mem->buf[silc_int_mem_get_pos_index(mem, obj)] >> SILC_INT_MEM_POS_SHIFT);
-  assert(pos >= 0 && pos < mem->avail_index);
+  SILC_ASSERT(pos >= 0 && pos < mem->avail_index);
   return mem->buf + pos;
 }
 
@@ -145,7 +145,7 @@ static inline silc_obj* silc_int_mem_get_ref(struct silc_mem_t* mem, silc_obj ob
 
   if (subtype != NULL) {
     *subtype = silc_obj_to_int(contents[0]);
-    assert(*subtype >= 0);
+    SILC_ASSERT(*subtype >= 0);
   }
 
   if (len != NULL) {
@@ -186,7 +186,7 @@ static inline int silc_int_mem_parse_ref(struct silc_mem_t* mem, silc_obj obj, i
       break;
 
     default:
-      assert(!"unknown reference type");
+      SILC_ASSERT(!"unknown reference type");
   }
 
   if (char_content != NULL) {
@@ -204,6 +204,6 @@ static inline silc_obj* silc_parse_cons(struct silc_mem_t* mem, silc_obj obj) {
   int content_length = 0;
   silc_obj* result = NULL;
   int subtype = silc_int_mem_parse_ref(mem, obj, &content_length, NULL, &result);
-  assert(result != NULL & content_length == 2 && subtype == SILC_INT_MEM_CONS_SUBTYPE);
+  SILC_ASSERT(result != NULL & content_length == 2 && subtype == SILC_INT_MEM_CONS_SUBTYPE);
   return result;
 }

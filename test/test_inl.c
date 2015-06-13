@@ -4,7 +4,7 @@
 
 BEGIN_TEST_METHOD(test_inline_object_subtype)
   /* make sure types are all different */
-  assert(SILC_INL_SUBTYPE_NIL  != SILC_INL_SUBTYPE_BOOL &&
+  ASSERT(SILC_INL_SUBTYPE_NIL  != SILC_INL_SUBTYPE_BOOL &&
          SILC_INL_SUBTYPE_NIL  != SILC_INL_SUBTYPE_INT &&
          SILC_INL_SUBTYPE_NIL  != SILC_INL_SUBTYPE_ERR &&
          SILC_INL_SUBTYPE_BOOL != SILC_INL_SUBTYPE_INT &&
@@ -14,75 +14,75 @@ BEGIN_TEST_METHOD(test_inline_object_subtype)
   silc_obj o;
 
   o = SILC_OBJ_NIL;
-  assert(SILC_GET_TYPE(o) == SILC_TYPE_INL && SILC_GET_INL_SUBTYPE(o) == SILC_INL_SUBTYPE_NIL);
+  ASSERT(SILC_GET_TYPE(o) == SILC_TYPE_INL && SILC_GET_INL_SUBTYPE(o) == SILC_INL_SUBTYPE_NIL);
 
   o = SILC_OBJ_FALSE;
-  assert(SILC_GET_TYPE(o) == SILC_TYPE_INL && SILC_GET_INL_SUBTYPE(o) == SILC_INL_SUBTYPE_BOOL &&
+  ASSERT(SILC_GET_TYPE(o) == SILC_TYPE_INL && SILC_GET_INL_SUBTYPE(o) == SILC_INL_SUBTYPE_BOOL &&
     0 == SILC_GET_INL_CONTENT(o));
 
   o = SILC_OBJ_TRUE;
-  assert(SILC_GET_TYPE(o) == SILC_TYPE_INL && SILC_GET_INL_SUBTYPE(o) == SILC_INL_SUBTYPE_BOOL &&
+  ASSERT(SILC_GET_TYPE(o) == SILC_TYPE_INL && SILC_GET_INL_SUBTYPE(o) == SILC_INL_SUBTYPE_BOOL &&
     1 == SILC_GET_INL_CONTENT(o));
 
   o = SILC_OBJ_ZERO;
-  assert(SILC_GET_TYPE(o) == SILC_TYPE_INL && SILC_GET_INL_SUBTYPE(o) == SILC_INL_SUBTYPE_INT &&
+  ASSERT(SILC_GET_TYPE(o) == SILC_TYPE_INL && SILC_GET_INL_SUBTYPE(o) == SILC_INL_SUBTYPE_INT &&
     0 == SILC_GET_INL_CONTENT(o));
 END_TEST_METHOD()
 
 BEGIN_TEST_METHOD(test_nil_equivalence_to_zero)
   /* zero should also be equivalent to NIL */
-  assert(0 == SILC_OBJ_NIL);
+  ASSERT(0 == SILC_OBJ_NIL);
 END_TEST_METHOD()
 
 BEGIN_TEST_METHOD(test_int_conversions)
   silc_obj o;
 
   o = silc_int_to_obj(0);
-  assert(0 == silc_obj_to_int(o));
+  ASSERT(0 == silc_obj_to_int(o));
 
   o = silc_int_to_obj(1);
-  assert(1 == silc_obj_to_int(o));
+  ASSERT(1 == silc_obj_to_int(o));
 
   o |= SILC_INT_OBJ_SIGN_BIT; /* change sign */
-  assert(-1 == silc_obj_to_int(o));
+  ASSERT(-1 == silc_obj_to_int(o));
 
   o = silc_int_to_obj(1329);
-  assert(1329 == silc_obj_to_int(o));
+  ASSERT(1329 == silc_obj_to_int(o));
 
   o = silc_int_to_obj(-231234);
-  assert(-231234 == silc_obj_to_int(o));
+  ASSERT(-231234 == silc_obj_to_int(o));
 
   o &= (~SILC_INT_OBJ_SIGN_BIT); /* change sign */
-  assert(231234 == silc_obj_to_int(o));
+  ASSERT(231234 == silc_obj_to_int(o));
 
   o = silc_int_to_obj(-1);
-  assert(-1 == silc_obj_to_int(o));
+  ASSERT(-1 == silc_obj_to_int(o));
 END_TEST_METHOD()
 
 BEGIN_TEST_METHOD(test_inline_errors)
   silc_obj o;
 
   o = silc_err_from_code(SILC_ERR_INTERNAL);
-  assert(silc_try_get_err_code(o) == SILC_ERR_INTERNAL);
+  ASSERT(silc_try_get_err_code(o) == SILC_ERR_INTERNAL);
 END_TEST_METHOD()
 
 BEGIN_TEST_METHOD(test_non_error_object_to_code_conversion)
   silc_obj o;
 
   o = SILC_OBJ_NIL;
-  assert(silc_try_get_err_code(o) < 0 && "nil to error code convesion should fail");
+  ASSERT(silc_try_get_err_code(o) < 0 && "nil to error code convesion should fail");
 
   o = SILC_OBJ_TRUE;
-  assert(silc_try_get_err_code(o) < 0 && "true to error code convesion should fail");
+  ASSERT(silc_try_get_err_code(o) < 0 && "true to error code convesion should fail");
 
   o = SILC_OBJ_FALSE;
-  assert(silc_try_get_err_code(o) < 0 && "false to error code convesion should fail");
+  ASSERT(silc_try_get_err_code(o) < 0 && "false to error code convesion should fail");
 
   o = SILC_OBJ_ZERO;
-  assert(silc_try_get_err_code(o) < 0 && "0 to error code convesion should fail");
+  ASSERT(silc_try_get_err_code(o) < 0 && "0 to error code convesion should fail");
 
   o = silc_int_to_obj(-1);
-  assert(silc_try_get_err_code(o) < 0 && "-1 to error code convesion should fail");
+  ASSERT(silc_try_get_err_code(o) < 0 && "-1 to error code convesion should fail");
 END_TEST_METHOD()
 
 
@@ -99,7 +99,7 @@ static silc_obj do_error_op() {
 
 BEGIN_TEST_METHOD(test_do_error_op)
   silc_obj o = do_error_op();
-  assert(silc_try_get_err_code(o) == SILC_ERR_INTERNAL);
+  ASSERT(silc_try_get_err_code(o) == SILC_ERR_INTERNAL);
 END_TEST_METHOD()
 
 
@@ -116,8 +116,8 @@ static silc_obj do_normal_op() {
 
 BEGIN_TEST_METHOD(test_do_normal_op)
   silc_obj o = do_normal_op();
-  assert(silc_try_get_err_code(o) < 0);
-  assert(o == SILC_OBJ_TRUE);
+  ASSERT(silc_try_get_err_code(o) < 0);
+  ASSERT(o == SILC_OBJ_TRUE);
 END_TEST_METHOD()
 
 

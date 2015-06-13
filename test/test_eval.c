@@ -44,7 +44,7 @@ static void assert_eval_result(struct silc_ctx_t* c, const char* input, const ch
   READ_BUF(in, buf);
   if (0 != strcmp(buf, expected_eval_result)) {
     fprintf(stderr, "[eval] actual_result=%s, expected_result=%s\n", buf, expected_eval_result);
-    assert(!"results are not matching");
+    ASSERT(!"results are not matching");
   }
 }
 

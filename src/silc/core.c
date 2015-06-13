@@ -112,7 +112,7 @@ static inline silc_obj* get_oref(struct silc_mem_t* mem, silc_obj obj) {
   int content_length = 0;
   silc_obj* result = NULL;
   int subtype = silc_int_mem_parse_ref(mem, obj, &content_length, NULL, &result);
-  assert(result != NULL && subtype >= 0);
+  SILC_ASSERT(result != NULL && subtype >= 0);
   return result;
 }
 
@@ -218,7 +218,7 @@ static void add_function(struct silc_ctx_t* c, const char* symbol_name, silc_fn_
   /* assoc that function with a symbol */
   silc_obj sym = silc_sym_from_buf(c, symbol_name, strlen(symbol_name));
   silc_obj prev_assoc = silc_set_sym_assoc(c, sym, fn);
-  assert(silc_try_get_err_code(prev_assoc) == SILC_ERR_UNRESOLVED_SYMBOL);
+  SILC_ASSERT(silc_try_get_err_code(prev_assoc) == SILC_ERR_UNRESOLVED_SYMBOL);
 }
 
 static void init_builtins(struct silc_ctx_t* c) {
@@ -303,7 +303,7 @@ silc_obj silc_load(struct silc_ctx_t* c, const char* file_name) {
  * Converts error code to string.
  */
 const char* silc_err_code_to_str(int code) {
-  assert(code > 0);
+  SILC_ASSERT(code > 0);
   switch (code) {
     case SILC_ERR_INTERNAL:
       return "internal error";
@@ -397,7 +397,7 @@ silc_obj silc_eq(struct silc_ctx_t* c, silc_obj lhs, silc_obj rhs) {
         return SILC_OBJ_FALSE;
       }
 
-      assert(lhs_po != NULL && rhs_po != NULL);
+      SILC_ASSERT(lhs_po != NULL && rhs_po != NULL);
       for (int i = 0; i < lhs_len; ++lhs_len) {
         if (SILC_OBJ_TRUE != silc_eq(c, lhs_po[i], rhs_po[i])) {
           return SILC_OBJ_FALSE;
@@ -416,11 +416,11 @@ silc_obj silc_eq(struct silc_ctx_t* c, silc_obj lhs, silc_obj rhs) {
         return SILC_OBJ_FALSE;
       }
 
-      assert(lhs_pb != NULL && rhs_pb != NULL);
+      SILC_ASSERT(lhs_pb != NULL && rhs_pb != NULL);
       return (0 == memcmp(lhs_pb, rhs_pb, lhs_len)) ? SILC_OBJ_TRUE : SILC_OBJ_FALSE;
   }
 
-  assert(!"Not implemented");
+  SILC_ASSERT(!"Not implemented");
   return SILC_OBJ_FALSE;
 }
 
@@ -459,7 +459,7 @@ silc_obj silc_define_function(struct silc_ctx_t* c, silc_obj arg_list, silc_obj 
 
   silc_obj* content = NULL;
   silc_int_mem_parse_ref(c->mem, result, NULL, NULL, &content);
-  assert(content != NULL);
+  SILC_ASSERT(content != NULL);
 
   content[0] = silc_int_to_obj(-1); /* function index */
   content[1] = SILC_OBJ_ZERO; /* flags */
@@ -516,7 +516,7 @@ static silc_obj get_sym_info(struct silc_ctx_t* c, silc_obj o, silc_obj* sym_str
   if (subtype != SILC_OREF_SYMBOL_SUBTYPE) {
     return SILC_OBJ_NIL;
   }
-  assert(len == 3 && obj_contents != NULL);
+  SILC_ASSERT(len == 3 && obj_contents != NULL);
 
   if (hash_code != NULL) {
     *hash_code = obj_contents[0];
@@ -536,7 +536,7 @@ static int compare_str(struct silc_ctx_t* c, silc_obj str, const char* buf, int 
   int len = 0;
   char* char_content = NULL;
   int subtype = silc_int_mem_parse_ref(c->mem, str, &len, &char_content, NULL);
-  assert(SILC_BREF_STR_SUBTYPE == subtype);
+  SILC_ASSERT(SILC_BREF_STR_SUBTYPE == subtype);
 
   int size_diff = len - size;
   if (size_diff != 0) {
@@ -563,14 +563,14 @@ silc_obj silc_sym_from_buf(struct silc_ctx_t* c, const char* buf, int size) {
   silc_obj* hash_table_contents;
   int hash_table_subtype = silc_int_mem_parse_ref(c->mem, c->sym_hash_table, &hash_table_size, NULL, &hash_table_contents);
 
-  assert(hash_table_subtype == SILC_OREF_HASHTABLE_SUBTYPE && hash_table_size > 0 && hash_table_contents != NULL);
+  SILC_ASSERT(hash_table_subtype == SILC_OREF_HASHTABLE_SUBTYPE && hash_table_size > 0 && hash_table_contents != NULL);
 
   int hash_table_count = silc_obj_to_int(hash_table_contents[0]);
 
   /* lookup and optional insert */
   int hash_code = calc_hash_code(buf, size, SILC_MAX_INT);
-  assert((hash_code >= 0) && (hash_code < SILC_MAX_INT));
-  
+  SILC_ASSERT((hash_code >= 0) && (hash_code < SILC_MAX_INT));
+
   int pos_modulo = hash_table_size - 1; // here and below: 1 is a service information size
   int pos = 1 + (hash_code % pos_modulo);
   silc_obj hash_code_obj = silc_int_to_obj(hash_code);
@@ -614,7 +614,7 @@ silc_obj silc_set_sym_assoc(struct silc_ctx_t* c, silc_obj o, silc_obj new_assoc
     return SILC_ERR_INVALID_ARGS;
   }
 
-  assert(len == 3 && obj_contents != NULL);
+  SILC_ASSERT(len == 3 && obj_contents != NULL);
   silc_obj old_assoc = obj_contents[2];
   obj_contents[2] = new_assoc;
   return old_assoc;
@@ -630,7 +630,7 @@ int silc_get_str_chars(struct silc_ctx_t* c, silc_obj o, char* buf, int pos, int
   silc_obj* obj_content = NULL;
   int result = 0;
   if (silc_int_mem_parse_ref(c->mem, o, &len, &char_content, &obj_content) == SILC_BREF_STR_SUBTYPE) {
-    assert(len >= 0 && char_content != NULL);
+    SILC_ASSERT(len >= 0 && char_content != NULL);
     result = ((pos + size) < len ? size : len - pos);
     if (result > 0 && char_content != NULL) {
       memcpy(buf, char_content + pos, result);
@@ -710,7 +710,7 @@ static silc_obj call_builtin(struct silc_ctx_t* c, silc_obj* cons_contents, silc
   silc_obj result = push_arguments(c, cons_contents[1], special);
   if (silc_try_get_err_code(result) < 0) {
     int fn_pos = silc_obj_to_int(fn_contents[0]);
-    assert(fn_pos >= 0 && fn_pos < c->fn_count);
+    SILC_ASSERT(fn_pos >= 0 && fn_pos < c->fn_count);
     silc_fn_ptr fn_ptr = c->fn_array[fn_pos];
 
     /* ok, now prepare function call context */
@@ -719,7 +719,7 @@ static silc_obj call_builtin(struct silc_ctx_t* c, silc_obj* cons_contents, silc
       .argc = c->stack_end - prev_end,
       .argv = c->stack + prev_end
     };
-    assert(funcall.argc >= 0);
+    SILC_ASSERT(funcall.argc >= 0);
 
     /* call that function */
     result = fn_ptr(&funcall);
@@ -733,7 +733,7 @@ static silc_obj call_builtin(struct silc_ctx_t* c, silc_obj* cons_contents, silc
 
 static silc_obj call_lambda(struct silc_ctx_t* c, silc_obj* cons_contents, silc_obj* fn_contents, int len) {
   silc_obj args[30];
-  assert(len >= 3);
+  SILC_ASSERT(len >= 3);
 
   /* save args */
   for (int i = 3; i < len; ++i) {

@@ -45,7 +45,7 @@ BEGIN_TEST_METHOD(test_read_number)
   silc_obj o = not_an_error(read_obj(c));
 
   /* Then: */
-  assert(silc_int_to_obj(123) == o);
+  ASSERT(silc_int_to_obj(123) == o);
   silc_free_context(c);
 END_TEST_METHOD()
 
@@ -60,13 +60,13 @@ BEGIN_TEST_METHOD(test_read_cons_single)
   /* Then: */
   silc_obj car = silc_car(c, o);
   silc_obj cdr = silc_cdr(c, o);
-  assert(silc_int_to_obj(1) == car);
-  assert(SILC_OBJ_NIL == cdr);
+  ASSERT(silc_int_to_obj(1) == car);
+  ASSERT(SILC_OBJ_NIL == cdr);
 
   /* Check representation */
   silc_print(c, o, in);
   READ_BUF(in, buf);
-  assert(0 == strcmp(buf, "(1)"));
+  ASSERT(0 == strcmp(buf, "(1)"));
 
   silc_free_context(c);
 END_TEST_METHOD()
@@ -82,13 +82,13 @@ BEGIN_TEST_METHOD(test_read_cons_multiple)
   /* Then: */
   silc_obj car = silc_car(c, o);
   silc_obj cdr = silc_cdr(c, o);
-  assert(silc_int_to_obj(1) == car);
-  assert(SILC_OBJ_NIL != cdr);
+  ASSERT(silc_int_to_obj(1) == car);
+  ASSERT(SILC_OBJ_NIL != cdr);
 
   /* Check representation */
   silc_print(c, o, in);
   READ_BUF(in, buf);
-  assert(0 == strcmp(buf, "(1 0 -1)"));
+  ASSERT(0 == strcmp(buf, "(1 0 -1)"));
 
   silc_free_context(c);
 END_TEST_METHOD()
@@ -104,13 +104,13 @@ BEGIN_TEST_METHOD(test_read_cons_nested)
   /* Then: */
   silc_obj car = silc_car(c, o);
   silc_obj cdr = silc_cdr(c, o);
-  assert(silc_int_to_obj(1) == car);
-  assert(SILC_OBJ_NIL != cdr);
+  ASSERT(silc_int_to_obj(1) == car);
+  ASSERT(SILC_OBJ_NIL != cdr);
 
   /* Check representation */
   silc_print(c, o, in);
   READ_BUF(in, buf);
-  assert(0 == strcmp(buf, "(1 (2 3 (4)))"));
+  ASSERT(0 == strcmp(buf, "(1 (2 3 (4)))"));
 
   silc_free_context(c);
 END_TEST_METHOD()
@@ -124,7 +124,7 @@ BEGIN_TEST_METHOD(test_read_special_true)
   silc_obj o = not_an_error(read_obj(c));
 
   /* Then: */
-  assert(SILC_OBJ_TRUE == o);
+  ASSERT(SILC_OBJ_TRUE == o);
   silc_free_context(c);
 END_TEST_METHOD()
 
@@ -137,7 +137,7 @@ BEGIN_TEST_METHOD(test_read_special_false)
   silc_obj o = not_an_error(read_obj(c));
 
   /* Then: */
-  assert(SILC_OBJ_FALSE == o);
+  ASSERT(SILC_OBJ_FALSE == o);
   silc_free_context(c);
 END_TEST_METHOD()
 
@@ -150,7 +150,7 @@ BEGIN_TEST_METHOD(test_read_special_nil)
   silc_obj o = not_an_error(read_obj(c));
 
   /* Then: */
-  assert(SILC_OBJ_NIL == o);
+  ASSERT(SILC_OBJ_NIL == o);
   silc_free_context(c);
 END_TEST_METHOD()
 
@@ -166,7 +166,7 @@ static void helper_test_read_symbol(const char* symbol_str) {
   /* Then: */
   silc_obj str = SILC_OBJ_NIL;
   silc_obj assoc = silc_get_sym_info(c, o, &str);
-  assert(SILC_ERR_UNRESOLVED_SYMBOL == silc_try_get_err_code(assoc));
+  ASSERT(SILC_ERR_UNRESOLVED_SYMBOL == silc_try_get_err_code(assoc));
   assert_same_str(c, str, symbol_str, strlen(symbol_str));
 
   silc_free_context(c);

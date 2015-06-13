@@ -9,6 +9,19 @@
 #define countof(arr)    (sizeof(arr) / sizeof(arr[0]))
 #endif
 
+#ifdef NDEBUG
+/* Ad hoc version of assert for release build */
+#define ASSERT(x) \
+  if (!(x)) { \
+    fputs("Assertion failed: ", stderr); \
+    fputs(#x, stderr); \
+    fputc('\n', stderr); \
+    abort(); \
+  }
+#else
+#define ASSERT assert
+#endif
+
 #ifndef TEST_BEFORE
 #define TEST_BEFORE() {}
 #endif
