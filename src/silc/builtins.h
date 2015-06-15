@@ -22,8 +22,13 @@ silc_obj silc_internal_fn_lambda(struct silc_funcall_t* f);
 
 silc_obj silc_internal_fn_print(struct silc_funcall_t* f);
 
+silc_obj silc_internal_fn_cons(struct silc_funcall_t* f);
+
 silc_obj silc_internal_fn_inc(struct silc_funcall_t* f);
 silc_obj silc_internal_fn_plus(struct silc_funcall_t* f);
+silc_obj silc_internal_fn_minus(struct silc_funcall_t* f);
+silc_obj silc_internal_fn_div(struct silc_funcall_t* f);
+silc_obj silc_internal_fn_mul(struct silc_funcall_t* f);
 
 silc_obj silc_internal_fn_load(struct silc_funcall_t* f);
 

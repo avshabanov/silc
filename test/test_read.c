@@ -1,5 +1,7 @@
 #include "silc.h"
 
+#include <stdbool.h>
+
 #define TEST_BEFORE(test_id)    open_tmpfiles()
 #define TEST_AFTER(test_id)     close_tmpfiles()
 #include "test.h"
@@ -155,7 +157,7 @@ BEGIN_TEST_METHOD(test_read_special_nil)
 END_TEST_METHOD()
 
 
-static void helper_test_read_symbol(const char* symbol_str) {
+static void helper_test_read_symbol(const char* symbol_str, bool check_assoc) {
   /* Given: */
   struct silc_ctx_t* c = silc_new_context();
   write_and_rewind(out, symbol_str);
@@ -166,26 +168,28 @@ static void helper_test_read_symbol(const char* symbol_str) {
   /* Then: */
   silc_obj str = SILC_OBJ_NIL;
   silc_obj assoc = silc_get_sym_info(c, o, &str);
-  ASSERT(SILC_ERR_UNRESOLVED_SYMBOL == silc_try_get_err_code(assoc));
+  if (check_assoc) {
+    ASSERT(SILC_ERR_UNRESOLVED_SYMBOL == silc_try_get_err_code(assoc));
+  }
   assert_same_str(c, str, symbol_str, strlen(symbol_str));
 
   silc_free_context(c);
 }
 
 BEGIN_TEST_METHOD(test_read_single_char_symbol)
-  helper_test_read_symbol("s");
+  helper_test_read_symbol("s", true);
 END_TEST_METHOD()
 
 BEGIN_TEST_METHOD(test_read_multichar_symbol_with_dashes)
-  helper_test_read_symbol("aaa-bb-c");
+  helper_test_read_symbol("aaa-bb-c", true);
 END_TEST_METHOD()
 
 BEGIN_TEST_METHOD(test_read_multichar_alphanum_symbol)
-  helper_test_read_symbol("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789*&+-");
+  helper_test_read_symbol("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789*&+-", true);
 END_TEST_METHOD()
 
 BEGIN_TEST_METHOD(test_read_minus_sign)
-  helper_test_read_symbol("-");
+  helper_test_read_symbol("-", false);
 END_TEST_METHOD()
 
 int main(int argc, char** argv) {

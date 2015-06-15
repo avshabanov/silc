@@ -53,6 +53,17 @@ silc_obj silc_internal_fn_print(struct silc_funcall_t* f) {
   return SILC_OBJ_NIL;
 }
 
+silc_obj silc_internal_fn_cons(struct silc_funcall_t* f) {
+  EXPECT_ARG_COUNT(f, 2);
+
+  silc_obj car;
+  silc_obj cdr;
+  SILC_CHECKED_SET(car, f->argv[0]);
+  SILC_CHECKED_SET(cdr, f->argv[1]);
+
+  return silc_cons(f->ctx, car, cdr);
+}
+
 silc_obj silc_internal_fn_plus(struct silc_funcall_t* f) {
   int result = 0;
 
@@ -67,6 +78,71 @@ silc_obj silc_internal_fn_plus(struct silc_funcall_t* f) {
         /* TODO: upgrade to long (or BigInteger) */
         return silc_err_from_code(SILC_ERR_VALUE_OUT_OF_RANGE);
       }
+    } else {
+      return silc_err_from_code(SILC_ERR_INVALID_ARGS); /* Non-incrementable argument */
+    }
+  }
+
+  return silc_int_to_obj(result);
+}
+
+silc_obj silc_internal_fn_minus(struct silc_funcall_t* f) {
+  int result = 0;
+
+  for (int i = 0; i < f->argc; ++i) {
+    silc_obj arg;
+    SILC_CHECKED_SET(arg, f->argv[i]);
+
+    if ((SILC_GET_TYPE(arg) == SILC_TYPE_INL) && (SILC_GET_INL_SUBTYPE(arg) == SILC_INL_SUBTYPE_INT)) {
+      if (i == 0) {
+        result = silc_obj_to_int(arg);
+      } else {
+        result -= silc_obj_to_int(arg);
+      }
+
+      /* TODO: underflow error check */
+    } else {
+      return silc_err_from_code(SILC_ERR_INVALID_ARGS); /* Non-incrementable argument */
+    }
+  }
+
+  return silc_int_to_obj(result);
+}
+
+silc_obj silc_internal_fn_div(struct silc_funcall_t* f) {
+  int result = 0;
+
+  for (int i = 0; i < f->argc; ++i) {
+    silc_obj arg;
+    SILC_CHECKED_SET(arg, f->argv[i]);
+
+    if ((SILC_GET_TYPE(arg) == SILC_TYPE_INL) && (SILC_GET_INL_SUBTYPE(arg) == SILC_INL_SUBTYPE_INT)) {
+      if (i == 0) {
+        result = silc_obj_to_int(arg);
+      } else {
+        result /= silc_obj_to_int(arg);
+      }
+
+      /* TODO: underflow error check */
+    } else {
+      return silc_err_from_code(SILC_ERR_INVALID_ARGS); /* Non-incrementable argument */
+    }
+  }
+
+  return silc_int_to_obj(result);
+}
+
+silc_obj silc_internal_fn_mul(struct silc_funcall_t* f) {
+  int result = 1;
+
+  for (int i = 0; i < f->argc; ++i) {
+    silc_obj arg;
+    SILC_CHECKED_SET(arg, f->argv[i]);
+
+    if ((SILC_GET_TYPE(arg) == SILC_TYPE_INL) && (SILC_GET_INL_SUBTYPE(arg) == SILC_INL_SUBTYPE_INT)) {
+      result *= silc_obj_to_int(arg);
+
+      /* TODO: overflow error check */
     } else {
       return silc_err_from_code(SILC_ERR_INVALID_ARGS); /* Non-incrementable argument */
     }

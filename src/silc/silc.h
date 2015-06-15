@@ -16,17 +16,17 @@
 
 #include <stdio.h>
 #include <limits.h>
-#include <assert.h>
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 #ifdef NDEBUG
 #define SILC_ASSERT(x)      ((void) (x))
 #else
+#include <assert.h>
 #define SILC_ASSERT         assert
 #endif /* /NDEBUG */
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /* Base declarations */
 
@@ -187,6 +187,7 @@ static inline int silc_try_get_err_code(silc_obj obj) {
 #define SILC_OREF_SYMBOL_SUBTYPE      (10)
 #define SILC_OREF_HASHTABLE_SUBTYPE   (20)
 #define SILC_OREF_FUNCTION_SUBTYPE    (21)
+#define SILC_OREF_ENVIRONMENT_SUBTYPE (22)
 
 /**
  * Contains length, then sequence of bytes.
@@ -298,6 +299,8 @@ void silc_gc(struct silc_ctx_t* c);
 silc_obj silc_load(struct silc_ctx_t* c, const char* file_name);
 
 silc_obj silc_define_function(struct silc_ctx_t* c, silc_obj arg_list, silc_obj body);
+
+silc_obj silc_get_lambda_begin(struct silc_ctx_t* c);
 
 void silc_set_exit_code(struct silc_ctx_t* c, int code);
 int silc_get_exit_code(struct silc_ctx_t* c);

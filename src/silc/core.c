@@ -76,6 +76,12 @@ struct silc_ctx_t {
   silc_fn_ptr *         fn_array;
   int                   fn_count;
 
+  /* current environment */
+  silc_obj              current_env;
+
+  /* begin function */
+  silc_obj              lambda_begin;
+
   /* exit code */
   int                   exit_code;
 };
@@ -184,8 +190,12 @@ static silc_fn_ptr g_silc_builtin_functions[] = {
   &silc_internal_fn_define,
   &silc_internal_fn_lambda,
   &silc_internal_fn_print,
+  &silc_internal_fn_cons,
   &silc_internal_fn_inc,
   &silc_internal_fn_plus,
+  &silc_internal_fn_minus,
+  &silc_internal_fn_div,
+  &silc_internal_fn_mul,
   &silc_internal_fn_begin,
   &silc_internal_fn_gc,
   &silc_internal_fn_quit
@@ -200,26 +210,93 @@ static int find_fn_pos(struct silc_ctx_t* c, silc_fn_ptr fn_ptr) {
   return -1;
 }
 
+/*
+ * Function definition utilities
+ */
+
 #define SILC_FN_SPECIAL       (1 << 1)
 #define SILC_FN_BUILTIN       (1 << 2)
 
-static void add_function(struct silc_ctx_t* c, const char* symbol_name, silc_fn_ptr fn_ptr, bool special) {
-  int fn_index = find_fn_pos(c, fn_ptr);
-  if (fn_index < 0) {
-    fputs("Unregistered function", stderr); /* should not happen */
-    abort();
+static silc_obj create_env(struct silc_ctx_t* c, silc_obj arg_list, silc_obj prev_env) {
+  SILC_ASSERT(prev_env == SILC_OBJ_NIL);
+  // TODO: SILC_OREF_ENVIRONMENT_SUBTYPE
+  return SILC_OBJ_NIL; /* TODO: impl */
+}
+
+static silc_obj check_args(struct silc_ctx_t* c, silc_obj arg_list) {
+  if (SILC_GET_TYPE(arg_list) != SILC_TYPE_CONS && arg_list != SILC_OBJ_NIL) {
+    return silc_err_from_code(SILC_ERR_INVALID_ARGS);
   }
 
-  int fn_flags = (special ? SILC_FN_SPECIAL : 0) | SILC_FN_BUILTIN;
+  for (silc_obj cdr = arg_list; cdr != SILC_OBJ_NIL;) {
+    if (SILC_GET_TYPE(cdr) != SILC_TYPE_CONS) {
+      return silc_err_from_code(SILC_ERR_INVALID_ARGS);
+    }
+
+    silc_obj* cdr_contents = silc_parse_cons(c->mem, cdr);
+    silc_obj car = cdr_contents[0];
+    cdr = cdr_contents[1];
+
+    if (silc_get_ref_subtype(c, car) != SILC_OREF_SYMBOL_SUBTYPE) {
+      return silc_err_from_code(SILC_ERR_INVALID_ARGS);
+    }
+  }
+
+  return SILC_OBJ_NIL; /* OK */
+}
+
+static silc_obj create_function(struct silc_ctx_t* c,
+                                int flags,
+                                silc_obj prev_env,
+                                silc_fn_ptr fn_ptr,
+                                silc_obj arg_list,
+                                silc_obj body) {
+  silc_obj body_entry;
+  if (fn_ptr != NULL) {
+    SILC_ASSERT(body == SILC_OBJ_NIL || !"Function body should be null if fn_ptr is not null");
+    int fn_index = find_fn_pos(c, fn_ptr);
+    if (fn_index < 0) {
+      fputs("Unregistered function\n", stderr); /* should not happen */
+      abort();
+    }
+    body_entry = silc_int_to_obj(fn_index); /* no body per se, function index */
+  } else {
+    body_entry = body;
+  }
+
+  /* check args */
+  silc_obj arg_check = check_args(c, arg_list);
+  if (silc_try_get_err_code(arg_check) > 0) {
+    return arg_check; /* unable to define a function */
+  }
 
   /* alloc function */
-  silc_obj content[] = { silc_int_to_obj(fn_index), silc_int_to_obj(fn_flags) };
-  silc_obj fn = silc_int_mem_alloc(c->mem, countof(content), content, SILC_TYPE_OREF, SILC_OREF_FUNCTION_SUBTYPE);
+  silc_obj content[] = {
+    silc_int_to_obj(flags),             /* function flags */
+    create_env(c, arg_list, prev_env),  /* function environment */
+    body_entry,                         /* function body */
+    arg_list                            /* function arguments */
+  };
+
+  return silc_int_mem_alloc(c->mem, countof(content), content, SILC_TYPE_OREF, SILC_OREF_FUNCTION_SUBTYPE);
+}
+
+static silc_obj add_function(struct silc_ctx_t* c, const char* symbol_name, silc_fn_ptr fn_ptr, bool special) {
+  /* create function */
+  silc_obj fn = create_function(c, (special ? SILC_FN_SPECIAL : 0) | SILC_FN_BUILTIN, SILC_OBJ_NIL, fn_ptr,
+    SILC_OBJ_NIL, SILC_OBJ_NIL);
+  int errcode = silc_try_get_err_code(fn);
+  if (errcode > 0) {
+    fprintf(stderr, ";; FATAL: unable to register function %s, errcode=%d\n", symbol_name, errcode);
+    abort();
+  }
 
   /* assoc that function with a symbol */
   silc_obj sym = silc_sym_from_buf(c, symbol_name, strlen(symbol_name));
   silc_obj prev_assoc = silc_set_sym_assoc(c, sym, fn);
   SILC_ASSERT(silc_try_get_err_code(prev_assoc) == SILC_ERR_UNRESOLVED_SYMBOL);
+
+  return fn;
 }
 
 static void init_builtins(struct silc_ctx_t* c) {
@@ -228,8 +305,13 @@ static void init_builtins(struct silc_ctx_t* c) {
   c->fn_count = countof(g_silc_builtin_functions);
 
   add_function(c, "inc", &silc_internal_fn_inc, false);
-  add_function(c, "+", &silc_internal_fn_plus, false);
 
+  add_function(c, "+", &silc_internal_fn_plus, false);
+  add_function(c, "-", &silc_internal_fn_minus, false);
+  add_function(c, "/", &silc_internal_fn_div, false);
+  add_function(c, "*", &silc_internal_fn_mul, false);
+
+  add_function(c, "cons", &silc_internal_fn_cons, false);
   add_function(c, "print", &silc_internal_fn_print, false);
 
   add_function(c, "load", &silc_internal_fn_load, false);
@@ -237,7 +319,7 @@ static void init_builtins(struct silc_ctx_t* c) {
   add_function(c, "define", &silc_internal_fn_define, true);
   add_function(c, "lambda", &silc_internal_fn_lambda, true);
 
-  add_function(c, "begin", &silc_internal_fn_begin, false);
+  c->lambda_begin = add_function(c, "begin", &silc_internal_fn_begin, false);
 
   add_function(c, "gc", &silc_internal_fn_gc, false);
   add_function(c, "quit", &silc_internal_fn_quit, false);
@@ -299,6 +381,10 @@ silc_obj silc_load(struct silc_ctx_t* c, const char* file_name) {
 
   /* TODO: implement */
   return silc_err_from_code(SILC_ERR_INTERNAL);
+}
+
+silc_obj silc_get_lambda_begin(struct silc_ctx_t* c) {
+  return c->lambda_begin;
 }
 
 /**
@@ -436,64 +522,8 @@ int silc_get_ref_subtype(struct silc_ctx_t* c, silc_obj o) {
   return silc_int_mem_parse_ref(c->mem, o, NULL, NULL, NULL);
 }
 
-static int cons_size(struct silc_ctx_t* c, silc_obj cons) {
-  silc_obj cdr = cons;
-  int count = 0;
-  for (;;) {
-    if (cdr == SILC_OBJ_NIL) {
-      break;
-    }
-
-    if (SILC_GET_TYPE(cdr) != SILC_TYPE_CONS) {
-      ++count;
-      break;
-    }
-
-    silc_obj* cdr_contents = silc_parse_cons(c->mem, cdr);
-    ++count;
-    cdr = cdr_contents[1];
-  }
-  return count;
-}
-
 silc_obj silc_define_function(struct silc_ctx_t* c, silc_obj arg_list, silc_obj body) {
-  if (SILC_GET_TYPE(arg_list) != SILC_TYPE_CONS && arg_list != SILC_OBJ_NIL) {
-    fputs("[DBG] arg_list - wrong type\n", stderr);
-    return silc_err_from_code(SILC_ERR_INVALID_ARGS);
-  }
-
-  silc_obj result = silc_int_mem_alloc(c->mem, 3 + cons_size(c, arg_list), NULL,
-    SILC_TYPE_OREF, SILC_OREF_FUNCTION_SUBTYPE);
-
-  silc_obj* content = NULL;
-  silc_int_mem_parse_ref(c->mem, result, NULL, NULL, &content);
-  SILC_ASSERT(content != NULL);
-
-  content[0] = silc_int_to_obj(-1); /* function index */
-  content[1] = SILC_OBJ_ZERO; /* flags */
-  content[2] = body; /* flags */
-
-  silc_obj cdr = arg_list;
-  for (int pos = 0; cdr != SILC_OBJ_NIL; ++pos) {
-    if (SILC_GET_TYPE(cdr) != SILC_TYPE_CONS) {
-      fputs("[DBG] cdr - wrong type\n", stderr);
-      return silc_err_from_code(SILC_ERR_INVALID_ARGS);
-    }
-
-    silc_obj* cdr_contents = silc_parse_cons(c->mem, cdr);
-    silc_obj car = cdr_contents[0];
-    cdr = cdr_contents[1];
-
-    if (silc_get_ref_subtype(c, car) != SILC_OREF_SYMBOL_SUBTYPE) {
-      fputs("[DBG] car is not a sym\n", stderr);
-      return silc_err_from_code(SILC_ERR_INVALID_ARGS);
-    }
-
-    content[pos + 3] = car; /* put symbol to the appropriate position */
-  }
-
-  /* alloc function */
-  return result;
+  return create_function(c, 0, c->current_env, NULL, arg_list, body);
 }
 
 /*
@@ -711,13 +741,16 @@ static silc_obj push_arguments(struct silc_ctx_t* c, silc_obj cdr, bool special_
 }
 
 static silc_obj call_builtin(struct silc_ctx_t* c, silc_obj* cons_contents, silc_obj* fn_contents, bool special) {
+  assert(SILC_OBJ_NIL == fn_contents[1] && /* environment should always be null for builtin functions */
+         SILC_OBJ_NIL == fn_contents[3] /* builtin function arglist should also be null */);
+
   /* save stack state */
   int prev_end = c->stack_end;
 
   /* put arguments to the function stack */
   silc_obj result = push_arguments(c, cons_contents[1], special);
   if (silc_try_get_err_code(result) < 0) {
-    int fn_pos = silc_obj_to_int(fn_contents[0]);
+    int fn_pos = silc_obj_to_int(fn_contents[2]); /* function position */
     SILC_ASSERT(fn_pos >= 0 && fn_pos < c->fn_count);
     silc_fn_ptr fn_ptr = c->fn_array[fn_pos];
 
@@ -739,21 +772,43 @@ static silc_obj call_builtin(struct silc_ctx_t* c, silc_obj* cons_contents, silc
   return result;
 }
 
-static silc_obj call_lambda(struct silc_ctx_t* c, silc_obj* cons_contents, silc_obj* fn_contents, int len) {
-  silc_obj args[30];
-  SILC_ASSERT(len >= 3);
+struct saved_arg_t {
+  silc_obj sym;
+  silc_obj value;
+};
+
+static silc_obj call_lambda(struct silc_ctx_t* c, silc_obj* cons_contents, silc_obj* fn_contents) {
+  silc_obj result;
+
+  silc_obj prev_env = c->current_env;
+  c->current_env = fn_contents[1]; /* update environment */
+
+  silc_obj arg_list = fn_contents[3];
 
   /* save args */
-  for (int i = 3; i < len; ++i) {
-    args[i - 3] = silc_get_sym_info(c, fn_contents[i], NULL);
+  struct saved_arg_t saved_args[8]; /* TODO: make dynamically resizeable (in-heap) */
+  struct saved_arg_t* saved_args_tail = saved_args;
+  for (silc_obj cdr_arg_list = arg_list; cdr_arg_list != SILC_OBJ_NIL;) {
+    silc_obj* cons_arg_list = silc_parse_cons(c->mem, cdr_arg_list);
+    silc_obj car_arg_list = cons_arg_list[0];
+    cdr_arg_list = cons_arg_list[1];
+
+    if (saved_args_tail >= (saved_args + countof(saved_args))) {
+      result = SILC_ERR_INVALID_ARGS; /* Too many arguments */
+      goto LRestore;
+    }
+
+    struct saved_arg_t* a = saved_args_tail++;
+    a->sym = car_arg_list;
+    a->value = silc_get_sym_info(c, car_arg_list, NULL);
   }
 
   /* assoc args */
   silc_obj cdr = cons_contents[1];
-  silc_obj result;
-  for (int i = 3; i < len; ++i) {
+  for (struct saved_arg_t* it = saved_args; it < saved_args_tail; ++it) {
     if (cdr == SILC_OBJ_NIL) {
-      return silc_err_from_code(SILC_ERR_INVALID_ARGS); /* invalid number of args */
+      result = silc_err_from_code(SILC_ERR_INVALID_ARGS); /* invalid number of args */
+      goto LRestore;
     }
 
     cons_contents = silc_parse_cons(c->mem, cdr);
@@ -763,19 +818,22 @@ static silc_obj call_lambda(struct silc_ctx_t* c, silc_obj* cons_contents, silc_
     silc_obj eval_arg = silc_eval(c, car);
     if (silc_try_get_err_code(eval_arg) >= 0) {
       result = eval_arg;
-      goto LRestoreAssoc;
+      goto LRestore;
     }
-    silc_set_sym_assoc(c, fn_contents[i], eval_arg);
+    silc_set_sym_assoc(c, it->sym, eval_arg);
   }
 
   /* eval function body */
   result = silc_eval(c, fn_contents[2]);
 
-LRestoreAssoc:
+LRestore:
   /* restore args */
-  for (int i = 3; i < len; ++i) {
-    silc_set_sym_assoc(c, fn_contents[i], args[i - 3]);
+  for (struct saved_arg_t* it = saved_args; it < saved_args_tail; ++it) {
+    silc_set_sym_assoc(c, it->sym, it->value);
   }
+
+  /* restore environment */
+  c->current_env = prev_env;
 
   return result;
 }
@@ -798,16 +856,16 @@ static silc_obj eval_cons(struct silc_ctx_t* c, silc_obj cons) {
   if (subtype != SILC_OREF_FUNCTION_SUBTYPE) {
     return silc_err_from_code(SILC_ERR_NOT_A_FUNCTION);
   }
+  assert(4 == len); /* see create_function */
 
   /* parse function */
-  int fn_flags = silc_obj_to_int(fn_contents[1]);
+  int fn_flags = silc_obj_to_int(fn_contents[0]);
 
   silc_obj result;
   if (fn_flags & SILC_FN_BUILTIN) {
     result = call_builtin(c, cons_contents, fn_contents, fn_flags & SILC_FN_SPECIAL);
   } else {
-    /* TODO: merge code */
-    result = call_lambda(c, cons_contents, fn_contents, len);
+    result = call_lambda(c, cons_contents, fn_contents);
   }
 
   return result;

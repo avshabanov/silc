@@ -90,6 +90,18 @@ BEGIN_TEST_METHOD(test_eval_multi_define)
   silc_free_context(c);
 END_TEST_METHOD()
 
+BEGIN_TEST_METHOD(test_eval_cons)
+  struct silc_ctx_t* c = silc_new_context();
+  assert_eval_result(c, "(cons 1 (cons 2 (cons 3 nil)))", "(1 2 3)");
+  silc_free_context(c);
+END_TEST_METHOD()
+
+BEGIN_TEST_METHOD(test_eval_binary_arithmetic_operations)
+  struct silc_ctx_t* c = silc_new_context();
+  assert_eval_result(c, "(cons (+ 1 2) (cons (- 4 3) (cons (/ 10 5) (cons (* 2 4) nil))))", "(3 1 2 8)");
+  silc_free_context(c);
+END_TEST_METHOD()
+
 BEGIN_TEST_METHOD(test_eval_empty_lambda)
   struct silc_ctx_t* c = silc_new_context();
   assert_eval_result(c, "((lambda ()))", "nil");
@@ -105,6 +117,15 @@ END_TEST_METHOD()
 BEGIN_TEST_METHOD(test_eval_argval_lambda)
   struct silc_ctx_t* c = silc_new_context();
   assert_eval_result(c, "((lambda (a) (inc a)) 1)", "2");
+  silc_free_context(c);
+END_TEST_METHOD()
+
+BEGIN_TEST_METHOD(test_eval_restore_args)
+  struct silc_ctx_t* c = silc_new_context();
+  assert_eval_result(
+    c,
+    "(begin (define a 10) (define b 1) (define cf (lambda (a b) (+ (* 2 a) b))) (+ (cf 1000 100) a (* 8 b)))",
+    "2118");
   silc_free_context(c);
 END_TEST_METHOD()
 
@@ -151,9 +172,12 @@ int main(int argc, char** argv) {
   test_eval_define();
   test_eval_begin();
   test_eval_multi_define();
+  test_eval_cons();
+  test_eval_binary_arithmetic_operations();
   test_eval_empty_lambda();
   test_eval_ret1_lambda();
   test_eval_argval_lambda();
+  test_eval_restore_args();
   test_eval_gc();
   test_eval_nonfunction();
   test_eval_unresolved_sym();
