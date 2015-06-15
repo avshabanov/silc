@@ -15,7 +15,7 @@
 #include "silc.h"
 
 static void print_unknown(struct silc_ctx_t* c, silc_obj o, FILE* out) {
-  fprintf(out, "<Unknown#%p:%X>", (void*) c, o);
+  fprintf(out, "#<Unknown-%X>", o);
 }
 
 static void print_inl(struct silc_ctx_t* c, silc_obj o, FILE* out) {
@@ -100,6 +100,10 @@ static void print_oref(struct silc_ctx_t* c, silc_obj o, FILE* out) {
         silc_get_sym_info(c, o, &str);
         print_str_contents(c, str, out);
       }
+      break;
+
+    case SILC_OREF_FUNCTION_SUBTYPE:
+      fprintf(out, "#<CLOSURE-%X>", o);
       break;
 
     default:

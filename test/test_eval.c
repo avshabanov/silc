@@ -108,6 +108,40 @@ BEGIN_TEST_METHOD(test_eval_argval_lambda)
   silc_free_context(c);
 END_TEST_METHOD()
 
+BEGIN_TEST_METHOD(test_eval_gc)
+  struct silc_ctx_t* c = silc_new_context();
+  silc_set_default_out(c, in);
+
+  write_and_rewind(out, "(gc)");
+  silc_obj result = not_an_error(silc_eval(c, silc_read(c, out, silc_err_from_code(SILC_ERR_UNEXPECTED_EOF))));
+
+  assert(SILC_OBJ_NIL == result);
+
+  silc_free_context(c);
+END_TEST_METHOD()
+
+BEGIN_TEST_METHOD(test_eval_nonfunction)
+  struct silc_ctx_t* c = silc_new_context();
+
+  write_and_rewind(out, "(1)");
+  silc_obj result = silc_eval(c, silc_read(c, out, silc_err_from_code(SILC_ERR_UNEXPECTED_EOF)));
+
+  assert(SILC_ERR_NOT_A_FUNCTION == silc_try_get_err_code(result));
+
+  silc_free_context(c);
+END_TEST_METHOD()
+
+BEGIN_TEST_METHOD(test_eval_unresolved_sym)
+  struct silc_ctx_t* c = silc_new_context();
+
+  write_and_rewind(out, "(unknownsymbol)");
+  silc_obj result = silc_eval(c, silc_read(c, out, silc_err_from_code(SILC_ERR_UNEXPECTED_EOF)));
+
+  assert(SILC_ERR_UNRESOLVED_SYMBOL == silc_try_get_err_code(result));
+
+  silc_free_context(c);
+END_TEST_METHOD()
+
 int main(int argc, char** argv) {
   TESTS_STARTED();
   test_eval_inline();
@@ -120,6 +154,9 @@ int main(int argc, char** argv) {
   test_eval_empty_lambda();
   test_eval_ret1_lambda();
   test_eval_argval_lambda();
+  test_eval_gc();
+  test_eval_nonfunction();
+  test_eval_unresolved_sym();
   TESTS_SUCCEEDED();
   return 0;
 }

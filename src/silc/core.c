@@ -187,6 +187,7 @@ static silc_fn_ptr g_silc_builtin_functions[] = {
   &silc_internal_fn_inc,
   &silc_internal_fn_plus,
   &silc_internal_fn_begin,
+  &silc_internal_fn_gc,
   &silc_internal_fn_quit
 };
 
@@ -238,6 +239,7 @@ static void init_builtins(struct silc_ctx_t* c) {
 
   add_function(c, "begin", &silc_internal_fn_begin, false);
 
+  add_function(c, "gc", &silc_internal_fn_gc, false);
   add_function(c, "quit", &silc_internal_fn_quit, false);
 }
 
@@ -343,6 +345,12 @@ const char* silc_err_code_to_str(int code) {
 /*
  * Helper functions
  */
+
+FILE* silc_set_default_out(struct silc_ctx_t * c, FILE* f) {
+  FILE* old = c->settings->out;
+  c->settings->out = f;
+  return old;
+}
 
 FILE* silc_get_default_out(struct silc_ctx_t * c) {
   return c->settings->out;
@@ -777,7 +785,11 @@ static silc_obj eval_cons(struct silc_ctx_t* c, silc_obj cons) {
   silc_obj* cons_contents = silc_parse_cons(c->mem, cons);
 
   /* Get CAR and try evaluate it to function */
-  silc_obj fn = silc_eval(c, cons_contents[0]);
+  silc_obj fn;
+  SILC_CHECKED_SET(fn, silc_eval(c, cons_contents[0]));
+  if (SILC_GET_TYPE(fn) != SILC_TYPE_OREF) {
+    return silc_err_from_code(SILC_ERR_NOT_A_FUNCTION);
+  }
 
   /* Try parse as a function */
   int len = 0;

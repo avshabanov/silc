@@ -305,6 +305,7 @@ int silc_get_exit_code(struct silc_ctx_t* c);
 silc_obj silc_eq(struct silc_ctx_t* c, silc_obj lhs, silc_obj rhs);
 silc_obj silc_hash_code(struct silc_ctx_t* c, silc_obj o);
 
+FILE* silc_set_default_out(struct silc_ctx_t * c, FILE* f);
 FILE* silc_get_default_out(struct silc_ctx_t * c);
 
 silc_obj silc_read(struct silc_ctx_t * c, FILE * f, silc_obj eof);
