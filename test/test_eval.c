@@ -136,7 +136,7 @@ BEGIN_TEST_METHOD(test_eval_gc)
   write_and_rewind(out, "(gc)");
   silc_obj result = not_an_error(silc_eval(c, silc_read(c, out, silc_err_from_code(SILC_ERR_UNEXPECTED_EOF))));
 
-  assert(SILC_OBJ_NIL == result);
+  ASSERT(SILC_OBJ_NIL == result);
 
   silc_free_context(c);
 END_TEST_METHOD()
@@ -147,7 +147,7 @@ BEGIN_TEST_METHOD(test_eval_nonfunction)
   write_and_rewind(out, "(1)");
   silc_obj result = silc_eval(c, silc_read(c, out, silc_err_from_code(SILC_ERR_UNEXPECTED_EOF)));
 
-  assert(SILC_ERR_NOT_A_FUNCTION == silc_try_get_err_code(result));
+  ASSERT(SILC_ERR_NOT_A_FUNCTION == silc_try_get_err_code(result));
 
   silc_free_context(c);
 END_TEST_METHOD()
@@ -158,7 +158,7 @@ BEGIN_TEST_METHOD(test_eval_unresolved_sym)
   write_and_rewind(out, "(unknownsymbol)");
   silc_obj result = silc_eval(c, silc_read(c, out, silc_err_from_code(SILC_ERR_UNEXPECTED_EOF)));
 
-  assert(SILC_ERR_UNRESOLVED_SYMBOL == silc_try_get_err_code(result));
+  ASSERT(SILC_ERR_UNRESOLVED_SYMBOL == silc_try_get_err_code(result));
 
   silc_free_context(c);
 END_TEST_METHOD()

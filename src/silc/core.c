@@ -741,8 +741,8 @@ static silc_obj push_arguments(struct silc_ctx_t* c, silc_obj cdr, bool special_
 }
 
 static silc_obj call_builtin(struct silc_ctx_t* c, silc_obj* cons_contents, silc_obj* fn_contents, bool special) {
-  assert(SILC_OBJ_NIL == fn_contents[1] && /* environment should always be null for builtin functions */
-         SILC_OBJ_NIL == fn_contents[3] /* builtin function arglist should also be null */);
+  SILC_ASSERT(SILC_OBJ_NIL == fn_contents[1] && /* environment should always be null for builtin functions */
+              SILC_OBJ_NIL == fn_contents[3] /* builtin function arglist should also be null */);
 
   /* save stack state */
   int prev_end = c->stack_end;
@@ -856,7 +856,7 @@ static silc_obj eval_cons(struct silc_ctx_t* c, silc_obj cons) {
   if (subtype != SILC_OREF_FUNCTION_SUBTYPE) {
     return silc_err_from_code(SILC_ERR_NOT_A_FUNCTION);
   }
-  assert(4 == len); /* see create_function */
+  SILC_ASSERT(4 == len); /* see create_function */
 
   /* parse function */
   int fn_flags = silc_obj_to_int(fn_contents[0]);
