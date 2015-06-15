@@ -40,3 +40,43 @@ true
 
 ;; Exiting... Good bye!
 ```
+
+## Garbage collection demo
+
+Create some garbage in repl (notice closure objects):
+
+```
+rlwrap -n src/repl/target/silc
+;; SilcLisp by Alex Shabanov
+
+? (lambda ())
+#<CLOSURE-A2>
+? (lambda ())
+#<CLOSURE-AE>
+? (lambda ())
+#<CLOSURE-BA>
+? (lambda ())
+#<CLOSURE-C6>
+? (+ 1 2 (+ 3 4 (+ 5 6 7)) 8 9 10)
+55
+? (lambda ())
+#<CLOSURE-10E>
+```
+
+Then trigger garbage collection:
+
+```
+? (gc)
+;; starting garbage collection...
+;; garbage collected.
+nil
+```
+
+Then notice, that newly created objects (lambdas) are allocated in place of the previously allocated
+and now garbage collected objects:
+
+```
+? (lambda ())
+#<CLOSURE-A2>
+?
+```
