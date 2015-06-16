@@ -203,6 +203,7 @@ static inline int silc_try_get_err_code(silc_obj obj) {
 #define SILC_TYPE_BREF                (3)
 
 #define SILC_BREF_STR_SUBTYPE         (1000)
+#define SILC_BREF_BUFFER_SUBTYPE      (1001)
 
 /**
  * Represents variadic length reference type
@@ -335,6 +336,9 @@ silc_obj silc_set_sym_assoc(struct silc_ctx_t* c, silc_obj o, silc_obj new_assoc
 
 silc_obj silc_str(struct silc_ctx_t* c, const char* buf, int size);
 int silc_get_str_chars(struct silc_ctx_t* c, silc_obj o, char* buf, int pos, int size);
+
+silc_obj silc_byte_buf(struct silc_ctx_t* c, int byte_len);
+int silc_byte_buf_get(struct silc_ctx_t* c, silc_obj o, char** result);
 
 silc_obj silc_cons(struct silc_ctx_t* c, silc_obj car, silc_obj cdr);
 silc_obj silc_car(struct silc_ctx_t* c, silc_obj cons);

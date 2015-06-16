@@ -308,28 +308,32 @@ silc_obj silc_int_mem_alloc(struct silc_mem_t* mem, int content_length, const vo
       break;
 
     case SILC_TYPE_OREF:
-      SILC_ASSERT(content_length > 0);
+      SILC_ASSERT(content_length >= 0);
       pos_index = alloc_or_fail(mem, 2 + content_length, type);
       p_layout = mem->buf + (mem->buf[mem->last_pos_index - pos_index] >> SILC_INT_MEM_POS_SHIFT);
       *p_layout++ = silc_int_to_obj(subtype);
       *p_layout++ = silc_int_to_obj(content_length);
-      if (content != NULL) {
-        memcpy(p_layout, content, content_length * sizeof(silc_obj));
-      } else {
-        memset(p_layout, 0, content_length * sizeof(silc_obj)); /* initializes contents with NILs */
+      if (content_length > 0) {
+        if (content != NULL) {
+          memcpy(p_layout, content, content_length * sizeof(silc_obj));
+        } else {
+          memset(p_layout, 0, content_length * sizeof(silc_obj)); /* initializes contents with NILs */
+        }
       }
       break;
 
     case SILC_TYPE_BREF:
-      SILC_ASSERT(content_length > 0);
+      SILC_ASSERT(content_length >= 0);
       pos_index = alloc_or_fail(mem, 2 + silc_obj_count_from_byte_count(content_length), type);
       p_layout = mem->buf + (mem->buf[mem->last_pos_index - pos_index] >> SILC_INT_MEM_POS_SHIFT);
       *p_layout++ = silc_int_to_obj(subtype);
       *p_layout++ = silc_int_to_obj(content_length);
-      if (content != NULL) {
-        memcpy(p_layout, content, content_length);
-      } else {
-        memset(p_layout, 0, content_length); /* initializes contents with zeroes */
+      if (content_length > 0) {
+        if (content != NULL) {
+          memcpy(p_layout, content, content_length);
+        } else {
+          memset(p_layout, 0, content_length); /* initializes contents with zeroes */
+        }
       }
       break;
 

@@ -758,9 +758,8 @@ silc_obj silc_str(struct silc_ctx_t* c, const char* buf, int size) {
 int silc_get_str_chars(struct silc_ctx_t* c, silc_obj o, char* buf, int pos, int size) {
   int len = 0;
   char* char_content = NULL;
-  silc_obj* obj_content = NULL;
   int result = 0;
-  if (silc_int_mem_parse_ref(c->mem, o, &len, &char_content, &obj_content) == SILC_BREF_STR_SUBTYPE) {
+  if (silc_int_mem_parse_ref(c->mem, o, &len, &char_content, NULL) == SILC_BREF_STR_SUBTYPE) {
     SILC_ASSERT(len >= 0 && char_content != NULL);
     result = ((pos + size) < len ? size : len - pos);
     if (result > 0 && char_content != NULL) {
@@ -770,6 +769,21 @@ int silc_get_str_chars(struct silc_ctx_t* c, silc_obj o, char* buf, int pos, int
     }
   }
   return result;
+}
+
+silc_obj silc_byte_buf(struct silc_ctx_t* c, int byte_len) {
+  return silc_int_mem_alloc(c->mem, byte_len, NULL, SILC_TYPE_BREF, SILC_BREF_BUFFER_SUBTYPE);
+}
+
+int silc_byte_buf_get(struct silc_ctx_t* c, silc_obj o, char** result) {
+  int len = 0;
+  char* char_content = NULL;
+  if (silc_int_mem_parse_ref(c->mem, o, &len, &char_content, NULL) == SILC_BREF_BUFFER_SUBTYPE) {
+    SILC_ASSERT(char_content != NULL && len >= 0);
+    *result = char_content;
+    return len;
+  }
+  return -1;
 }
 
 silc_obj silc_cons(struct silc_ctx_t* c, silc_obj car, silc_obj cdr) {

@@ -24,6 +24,34 @@ static silc_obj read_symbol_or_special(struct silc_ctx_t * c, FILE * f);
 static silc_obj read_list(struct silc_ctx_t * c, FILE * f);
 static silc_obj read_obj(struct silc_ctx_t * c, FILE * f);
 
+/* Helper */
+
+struct read_buf_t {
+  char* buf;
+  int len;
+  int capacity;
+};
+
+static void add_char(struct silc_ctx_t* c, struct read_buf_t* read_buf, char ch) {
+  int pos = read_buf->len;
+  int new_len = pos + 1;
+  if (new_len > read_buf->capacity) {
+    int new_capacity = read_buf->capacity + read_buf->capacity / 2 + 4; /* x * 1.5 + 4 */
+    silc_obj ob = silc_byte_buf(c, new_capacity);
+    read_buf->capacity = new_capacity;
+    char* new_buf = NULL;
+    int actual_cap = silc_byte_buf_get(c, ob, &new_buf);
+    SILC_ASSERT(new_buf != NULL && actual_cap == new_capacity);
+    if (read_buf->buf != NULL) {
+      memcpy(new_buf, read_buf->buf, read_buf->len);
+    }
+    read_buf->buf = new_buf;
+  }
+
+  read_buf->buf[pos] = ch;
+  read_buf->len = new_len;
+}
+
 /* Implementation */
 
 static inline bool is_lisp_char(int c) {
@@ -168,6 +196,38 @@ static silc_obj read_symbol_or_special(struct silc_ctx_t * c, FILE * f) {
   return silc_sym_from_buf(c, buf, len);
 }
 
+static silc_obj read_str(struct silc_ctx_t * c, FILE * f) {
+  struct read_buf_t read_buf = {0};
+  bool prev_backslash = false;
+
+  for (;;) {
+    char ch = fgetc(f);
+    if (ch == '"') {
+      if (prev_backslash) {
+        add_char(c, &read_buf, '"');
+        continue;
+      }
+      break;
+    }
+
+    if (ch == '\\') {
+      if (prev_backslash) {
+        add_char(c, &read_buf, '\\');
+        prev_backslash = false;
+        continue;
+      }
+      prev_backslash = true;
+      continue;
+    }
+
+    add_char(c, &read_buf, ch);
+    prev_backslash = false;
+  }
+
+  /* alloc string from the buffer */
+  return silc_str(c, read_buf.buf, read_buf.len);
+}
+
 static silc_obj read_obj(struct silc_ctx_t * c, FILE * f) {
   int ch = get_nwc(f);
   if (ch == EOF) {
@@ -181,6 +241,10 @@ static silc_obj read_obj(struct silc_ctx_t * c, FILE * f) {
   if (ch == '-' || is_digit(ch)) {
     ungetc(ch, f);
     return read_number_or_symbol(c, f);
+  }
+
+  if (ch == '"') {
+    return read_str(c, f);
   }
 
   if (is_lisp_char(ch)) {
