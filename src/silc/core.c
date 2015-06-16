@@ -40,10 +40,6 @@
 static void * xmalloc(size_t size);
 static void * xmallocz(size_t size);
 static inline void xfree(void * p);
- 
-/* Object allocation */
-static silc_obj silc_hash_table(struct silc_ctx_t* c, int initial_size);
-
 
 
 /******************************************************************************* 
@@ -70,7 +66,7 @@ struct silc_ctx_t {
 
   /* root object for service data */
   silc_obj              root_cons;
-  silc_obj              sym_hash_table;
+  silc_obj              sym_name_hash_table;
 
   /* builtin functions */
   silc_fn_ptr *         fn_array;
@@ -124,8 +120,12 @@ static inline silc_obj* get_oref(struct silc_mem_t* mem, silc_obj obj) {
 
 /* Memory management-related */
 
+#define ROIS_ENTRY1   ((void*)1)
+#define ROIS_ENTRY2   ((void*)2)
+#define ROIS_ENTRY3   ((void*)3)
+
 static void* root_obj_iter_start(struct silc_mem_init_t* mem_init) {
-  return (void *)1;
+  return ROIS_ENTRY1;
 }
 
 static void* root_obj_iter_next(struct silc_mem_init_t* mem_init,
@@ -134,13 +134,18 @@ static void* root_obj_iter_next(struct silc_mem_init_t* mem_init,
   void* result = NULL;
   struct silc_ctx_t* c = mem_init->context;
 
-  if (iter_context == ((void *)1)) {
+  if (iter_context == ROIS_ENTRY1) {
     *objs = c->stack;
     *size = c->stack_end;
-    result = (void*)2;
-  } else if (iter_context == ((void *)2)) {
+    result = ROIS_ENTRY2;
+  } else if (iter_context == ROIS_ENTRY2) {
     *objs = &c->root_cons;
     *size = 1;
+    result = ROIS_ENTRY3;
+  } else if (iter_context == ROIS_ENTRY3) {
+    *objs = &c->current_env;
+    *size = 1;
+    result = NULL; /* no more roots */
   }
 
   return result;
@@ -181,8 +186,8 @@ static void init_mem(struct silc_ctx_t* c) {
 }
 
 static void init_globals(struct silc_ctx_t* c) {
-  c->sym_hash_table = silc_hash_table(c, 8179/*prime*/);
-  c->root_cons = silc_cons(c, c->sym_hash_table, SILC_OBJ_NIL);
+  c->sym_name_hash_table = silc_hash_table(c, 8179/*prime*/);
+  c->root_cons = silc_cons(c, c->sym_name_hash_table, SILC_OBJ_NIL);
 }
 
 static silc_fn_ptr g_silc_builtin_functions[] = {
@@ -211,17 +216,80 @@ static int find_fn_pos(struct silc_ctx_t* c, silc_fn_ptr fn_ptr) {
 }
 
 /*
- * Function definition utilities
+ * Hash table functions
  */
 
-#define SILC_FN_SPECIAL       (1 << 1)
-#define SILC_FN_BUILTIN       (1 << 2)
-
-static silc_obj create_env(struct silc_ctx_t* c, silc_obj arg_list, silc_obj prev_env) {
-  SILC_ASSERT(prev_env == SILC_OBJ_NIL);
-  // TODO: SILC_OREF_ENVIRONMENT_SUBTYPE
-  return SILC_OBJ_NIL; /* TODO: impl */
+static int obj_hash_code(silc_obj o, int table_size) {
+  return (((o >> SILC_INT_TYPE_SHIFT) % table_size) + table_size) % table_size;
 }
+
+static bool are_same_objects(silc_obj lhs, silc_obj rhs) {
+  return lhs == rhs;
+}
+
+static silc_obj* lookup_hash_table_cell(struct silc_ctx_t* c, silc_obj hash_table, silc_obj key) {
+  int size = 0;
+  silc_obj* contents;
+  int subtype = silc_int_mem_parse_ref(c->mem, hash_table, &size, NULL, &contents);
+  SILC_ASSERT(subtype == SILC_OREF_HASHTABLE_SUBTYPE && size > 0 && contents != NULL);
+
+  /* get position in a hash table */
+  int pos = 1 + obj_hash_code(key, size - 1);
+
+  /* cell found, now iterate over the  */
+  return contents + pos;
+}
+
+silc_obj silc_hash_table(struct silc_ctx_t* c, int initial_size) {
+  silc_obj result = silc_int_mem_alloc(c->mem, initial_size + 1, NULL, SILC_TYPE_OREF, SILC_OREF_HASHTABLE_SUBTYPE);
+  get_oref(c->mem, result)[0] = silc_int_to_obj(0); /* element count */
+  return result;
+}
+
+silc_obj silc_hash_table_get(struct silc_ctx_t* c, silc_obj hash_table, silc_obj key, silc_obj not_found_val) {
+  silc_obj* entry_list_ptr = lookup_hash_table_cell(c, hash_table, key);
+
+  for (silc_obj cell = *entry_list_ptr; cell != SILC_OBJ_NIL;) {
+    silc_obj* cell_contents = silc_parse_cons(c->mem, cell);
+    silc_obj cur_entry = cell_contents[0]; /* get current hash table entry */
+
+    silc_obj* cur_entry_contents = silc_parse_cons(c->mem, cur_entry);
+    if (are_same_objects(key, cur_entry_contents[0])) {
+      return cur_entry_contents[1]; /* return value */
+    }
+
+    cell = cell_contents[1]; /* go to next cell */
+  }
+
+  return not_found_val;
+}
+
+silc_obj silc_hash_table_put(struct silc_ctx_t* c, silc_obj hash_table, silc_obj key, silc_obj value, silc_obj not_found_val) {
+  silc_obj* entry_list_ptr = lookup_hash_table_cell(c, hash_table, key);
+
+  for (silc_obj cell = *entry_list_ptr; cell != SILC_OBJ_NIL;) {
+    silc_obj* cell_contents = silc_parse_cons(c->mem, cell);
+    silc_obj cur_entry = cell_contents[0]; /* get current hash table entry */
+
+    silc_obj* cur_entry_contents = silc_parse_cons(c->mem, cur_entry);
+    if (are_same_objects(key, cur_entry_contents[0])) {
+      silc_obj existing_value = cur_entry_contents[1];
+      cur_entry_contents[1] = value; /* override old value in place */
+      return existing_value;
+    }
+
+    cell = cell_contents[1]; /* go to next cell */
+  }
+
+  /* no entry found, insert a new one */
+  silc_obj new_entry = silc_cons(c, key, value);
+  *entry_list_ptr = silc_cons(c, new_entry, *entry_list_ptr);
+  return not_found_val;
+}
+
+/*
+ * Function argument list checking utility
+ */
 
 static silc_obj check_args(struct silc_ctx_t* c, silc_obj arg_list) {
   if (SILC_GET_TYPE(arg_list) != SILC_TYPE_CONS && arg_list != SILC_OBJ_NIL) {
@@ -245,6 +313,40 @@ static silc_obj check_args(struct silc_ctx_t* c, silc_obj arg_list) {
   return SILC_OBJ_NIL; /* OK */
 }
 
+/*
+ * Environment creation
+ */
+
+/*
+ * Function definition utilities
+ */
+
+#define SILC_FN_SPECIAL       (1 << 1)
+#define SILC_FN_BUILTIN       (1 << 2)
+
+static silc_obj create_env(struct silc_ctx_t* c, silc_obj arg_list, silc_obj prev_env) {
+  if (arg_list == SILC_OBJ_NIL) {
+    /* optimization: if function takes no args, it does not need a new enviroment, it can reuse an old one */
+    return prev_env;
+  }
+
+//  silc_obj not_found = silc_err_from_code(SILC_ERR_INVALID_ARGS);
+//  silc_obj val_map = silc_hash_table(c, 4);
+//  for (silc_obj arg_entry = arg_list; arg_entry != SILC_OBJ_NIL;) {
+//    silc_obj* arg_entry_contents = silc_parse_cons(c, arg_entry);
+//    silc_obj prev = silc_hash_table_put(c, val_map, );
+//  }
+
+  /* alloc function */
+  silc_obj content[] = {
+    prev_env,             /* function flags */
+    arg_list              /* function environment */
+  };
+
+  silc_obj result = silc_int_mem_alloc(c->mem, countof(content), content, SILC_TYPE_OREF, SILC_OREF_ENVIRONMENT_SUBTYPE);
+  return result;
+}
+
 static silc_obj create_function(struct silc_ctx_t* c,
                                 int flags,
                                 silc_obj prev_env,
@@ -264,24 +366,21 @@ static silc_obj create_function(struct silc_ctx_t* c,
     body_entry = body;
   }
 
-  /* check args */
-  silc_obj arg_check = check_args(c, arg_list);
-  if (silc_try_get_err_code(arg_check) > 0) {
-    return arg_check; /* unable to define a function */
-  }
+  SILC_CHECKED_DECLARE(arg_check, check_args(c, arg_list));
+  SILC_CHECKED_DECLARE(env, create_env(c, arg_list, prev_env));
 
   /* alloc function */
   silc_obj content[] = {
-    silc_int_to_obj(flags),             /* function flags */
-    create_env(c, arg_list, prev_env),  /* function environment */
-    body_entry,                         /* function body */
-    arg_list                            /* function arguments */
+    silc_int_to_obj(flags), /* function flags */
+    env,                    /* function environment */
+    body_entry,             /* function body */
+    arg_list                /* function arguments */
   };
 
   return silc_int_mem_alloc(c->mem, countof(content), content, SILC_TYPE_OREF, SILC_OREF_FUNCTION_SUBTYPE);
 }
 
-static silc_obj add_function(struct silc_ctx_t* c, const char* symbol_name, silc_fn_ptr fn_ptr, bool special) {
+static silc_obj add_builtin_function(struct silc_ctx_t* c, const char* symbol_name, silc_fn_ptr fn_ptr, bool special) {
   /* create function */
   silc_obj fn = create_function(c, (special ? SILC_FN_SPECIAL : 0) | SILC_FN_BUILTIN, SILC_OBJ_NIL, fn_ptr,
     SILC_OBJ_NIL, SILC_OBJ_NIL);
@@ -304,25 +403,25 @@ static void init_builtins(struct silc_ctx_t* c) {
   c->fn_array = g_silc_builtin_functions;
   c->fn_count = countof(g_silc_builtin_functions);
 
-  add_function(c, "inc", &silc_internal_fn_inc, false);
+  add_builtin_function(c, "inc", &silc_internal_fn_inc, false);
 
-  add_function(c, "+", &silc_internal_fn_plus, false);
-  add_function(c, "-", &silc_internal_fn_minus, false);
-  add_function(c, "/", &silc_internal_fn_div, false);
-  add_function(c, "*", &silc_internal_fn_mul, false);
+  add_builtin_function(c, "+", &silc_internal_fn_plus, false);
+  add_builtin_function(c, "-", &silc_internal_fn_minus, false);
+  add_builtin_function(c, "/", &silc_internal_fn_div, false);
+  add_builtin_function(c, "*", &silc_internal_fn_mul, false);
 
-  add_function(c, "cons", &silc_internal_fn_cons, false);
-  add_function(c, "print", &silc_internal_fn_print, false);
+  add_builtin_function(c, "cons", &silc_internal_fn_cons, false);
+  add_builtin_function(c, "print", &silc_internal_fn_print, false);
 
-  add_function(c, "load", &silc_internal_fn_load, false);
+  add_builtin_function(c, "load", &silc_internal_fn_load, false);
 
-  add_function(c, "define", &silc_internal_fn_define, true);
-  add_function(c, "lambda", &silc_internal_fn_lambda, true);
+  add_builtin_function(c, "define", &silc_internal_fn_define, true);
+  add_builtin_function(c, "lambda", &silc_internal_fn_lambda, true);
 
-  c->lambda_begin = add_function(c, "begin", &silc_internal_fn_begin, false);
+  c->lambda_begin = add_builtin_function(c, "begin", &silc_internal_fn_begin, false);
 
-  add_function(c, "gc", &silc_internal_fn_gc, false);
-  add_function(c, "quit", &silc_internal_fn_quit, false);
+  add_builtin_function(c, "gc", &silc_internal_fn_gc, false);
+  add_builtin_function(c, "quit", &silc_internal_fn_quit, false);
 }
 
 struct silc_ctx_t * silc_new_context() {
@@ -527,14 +626,8 @@ silc_obj silc_define_function(struct silc_ctx_t* c, silc_obj arg_list, silc_obj 
 }
 
 /*
- * Hash table
+ * String hash code calculation
  */
-
-static silc_obj silc_hash_table(struct silc_ctx_t* c, int initial_size) {
-  silc_obj result = silc_int_mem_alloc(c->mem, initial_size + 1, NULL, SILC_TYPE_OREF, SILC_OREF_HASHTABLE_SUBTYPE);
-  get_oref(c->mem, result)[0] = silc_int_to_obj(0); /* element count */
-  return result;
-}
 
 static inline int calc_hash_code(const char* buf, int size, int modulo) {
   int result = 0;
@@ -599,7 +692,7 @@ static int is_same_sym_str(struct silc_ctx_t* c, silc_obj sym, const char* buf, 
 silc_obj silc_sym_from_buf(struct silc_ctx_t* c, const char* buf, int size) {
   int hash_table_size = 0;
   silc_obj* hash_table_contents;
-  int hash_table_subtype = silc_int_mem_parse_ref(c->mem, c->sym_hash_table, &hash_table_size, NULL, &hash_table_contents);
+  int hash_table_subtype = silc_int_mem_parse_ref(c->mem, c->sym_name_hash_table, &hash_table_size, NULL, &hash_table_contents);
 
   SILC_ASSERT(hash_table_subtype == SILC_OREF_HASHTABLE_SUBTYPE && hash_table_size > 0 && hash_table_contents != NULL);
 

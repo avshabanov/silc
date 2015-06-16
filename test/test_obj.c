@@ -29,7 +29,7 @@ BEGIN_TEST_METHOD(test_object_type)
 END_TEST_METHOD()
 
 BEGIN_TEST_METHOD(test_sym_create)
-  struct silc_ctx_t * c = silc_new_context();
+  struct silc_ctx_t* c = silc_new_context();
 
   silc_obj o1;
   silc_obj o2;
@@ -85,10 +85,37 @@ BEGIN_TEST_METHOD(test_sym_create)
   silc_free_context(c);
 END_TEST_METHOD()
 
+BEGIN_TEST_METHOD(test_hash_table_lookup)
+  struct silc_ctx_t* c = silc_new_context();
+
+  silc_obj ht = silc_hash_table(c, 4);
+  silc_obj prev;
+
+  /* lookup for unknown object */
+  ASSERT(SILC_OBJ_FALSE == silc_hash_table_get(c, ht, silc_int_to_obj(1), SILC_OBJ_FALSE));
+
+  /* insert */
+  prev = silc_hash_table_put(c, ht, silc_int_to_obj(1), silc_int_to_obj(4), SILC_OBJ_TRUE);
+  ASSERT(SILC_OBJ_TRUE == prev);
+
+  /* lookup previously inserted */
+  ASSERT(silc_int_to_obj(4) == silc_hash_table_get(c, ht, silc_int_to_obj(1), SILC_OBJ_NIL));
+
+  /* update */
+  prev = silc_hash_table_put(c, ht, silc_int_to_obj(1), silc_int_to_obj(8), SILC_OBJ_TRUE);
+  ASSERT(silc_int_to_obj(4) == prev);
+
+  /* lookup previously inserted */
+  ASSERT(silc_int_to_obj(8) == silc_hash_table_get(c, ht, silc_int_to_obj(1), SILC_OBJ_NIL));
+
+  silc_free_context(c);
+END_TEST_METHOD()
+
 int main(int argc, char** argv) {
   TESTS_STARTED();
   test_object_type();
   test_sym_create();
+  test_hash_table_lookup();
   TESTS_SUCCEEDED();
   return 0;
 }

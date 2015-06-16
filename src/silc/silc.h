@@ -175,6 +175,14 @@ static inline int silc_try_get_err_code(silc_obj obj) {
   }
 
 /**
+ * Helper macro, that assigns an expression result to a newly declared variable.
+ * Returns result immediately if expression result is an error.
+ */
+#define SILC_CHECKED_DECLARE(varname, expr) \
+  silc_obj varname; \
+  SILC_CHECKED_SET(varname, expr);
+
+/**
  * Represents cons cell.
  */
 #define SILC_TYPE_CONS                (1)
@@ -307,6 +315,10 @@ int silc_get_exit_code(struct silc_ctx_t* c);
 
 silc_obj silc_eq(struct silc_ctx_t* c, silc_obj lhs, silc_obj rhs);
 silc_obj silc_hash_code(struct silc_ctx_t* c, silc_obj o);
+
+silc_obj silc_hash_table(struct silc_ctx_t* c, int initial_size);
+silc_obj silc_hash_table_get(struct silc_ctx_t* c, silc_obj hash_table, silc_obj key, silc_obj not_found_val);
+silc_obj silc_hash_table_put(struct silc_ctx_t* c, silc_obj hash_table, silc_obj key, silc_obj value, silc_obj not_found_val);
 
 FILE* silc_set_default_out(struct silc_ctx_t * c, FILE* f);
 FILE* silc_get_default_out(struct silc_ctx_t * c);
