@@ -124,8 +124,30 @@ BEGIN_TEST_METHOD(test_eval_restore_args)
   struct silc_ctx_t* c = silc_new_context();
   assert_eval_result(
     c,
-    "(begin (define a 10) (define b 1) (define cf (lambda (a b) (+ (* 2 a) b))) (+ (cf 1000 100) a (* 8 b)))",
+    "(begin\n"
+    " (define a 10)\n"
+    " (define b 1)\n"
+    " (define cf\n"
+    "  (lambda (a b)\n"
+    "    (+ (* 2 a) b)))\n"
+    " (+ (cf 1000 100) a (* 8 b))\n"
+    ")",
     "2118");
+  silc_free_context(c);
+END_TEST_METHOD()
+
+BEGIN_TEST_METHOD(test_eval_capturing_lexical_context)
+  struct silc_ctx_t* c = silc_new_context();
+  assert_eval_result(
+    c,
+    "(begin\n"
+    " (define a 3)\n"
+    " (define b 4)\n"
+    " (define x (lambda (a) (lambda (b) (+ a (* 2 b) 50000))))\n"
+    " (define y (x 1))\n"
+    " (+ (y 10) (* a 100) (* b 1000))\n"
+    ")",
+    "54321");
   silc_free_context(c);
 END_TEST_METHOD()
 
@@ -178,6 +200,7 @@ int main(int argc, char** argv) {
   test_eval_ret1_lambda();
   test_eval_argval_lambda();
   test_eval_restore_args();
+  test_eval_capturing_lexical_context();
   test_eval_gc();
   test_eval_nonfunction();
   test_eval_unresolved_sym();

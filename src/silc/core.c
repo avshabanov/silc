@@ -777,6 +777,7 @@ silc_obj silc_cdr(struct silc_ctx_t* c, silc_obj cons) {
  * Evaluation
  */
 
+#if 0
 static silc_obj create_env(struct silc_ctx_t* c, silc_obj name_val_pairs, silc_obj prev_env) {
   if (name_val_pairs == SILC_OBJ_NIL) {
     /* optimization: if function takes no args, it does not need a new enviroment, it can reuse an old one */
@@ -792,6 +793,7 @@ static silc_obj create_env(struct silc_ctx_t* c, silc_obj name_val_pairs, silc_o
   silc_obj result = silc_int_mem_alloc(c->mem, countof(content), content, SILC_TYPE_OREF, SILC_OREF_ENVIRONMENT_SUBTYPE);
   return result;
 }
+#endif
 
 static silc_obj push_arguments(struct silc_ctx_t* c, silc_obj cdr, bool special_form) {
   while (cdr != SILC_OBJ_NIL) {
@@ -858,16 +860,16 @@ static silc_obj call_builtin(struct silc_ctx_t* c, silc_obj* cons_contents, silc
   return result;
 }
 
-static silc_obj append_args(struct silc_ctx_t* c, silc_obj arg_names, silc_obj prev_arg_value_pairs) {
-  silc_obj result = prev_arg_value_pairs;
-  for (silc_obj it = arg_names; it != SILC_OBJ_NIL; it = silc_cdr(c, it)) {
-    silc_obj arg_name = silc_car(c, it);
-    silc_obj arg_value = silc_get_sym_info(c, arg_name, NULL);
-
-    result = silc_cons(c, silc_cons(arg_name, arg_value), result);
-  }
-  return result;
-}
+//static silc_obj append_args(struct silc_ctx_t* c, silc_obj arg_names, silc_obj prev_arg_value_pairs) {
+//  silc_obj result = prev_arg_value_pairs;
+//  for (silc_obj it = arg_names; it != SILC_OBJ_NIL; it = silc_cdr(c, it)) {
+//    silc_obj arg_name = silc_car(c, it);
+//    silc_obj arg_value = silc_get_sym_info(c, arg_name, NULL);
+//
+//    result = silc_cons(c, silc_cons(c, arg_name, arg_value), result);
+//  }
+//  return result;
+//}
 
 static void restore_args(struct silc_ctx_t* c, silc_obj arg_value_pairs) {
   for (silc_obj it = arg_value_pairs; it != SILC_OBJ_NIL; it = silc_cdr(c, it)) {
@@ -883,7 +885,10 @@ static silc_obj call_lambda(struct silc_ctx_t* c, silc_obj arg_values, silc_obj*
   silc_obj result = SILC_OBJ_NIL;
   silc_obj prev_env = c->current_env;
   silc_obj arg_names = fn_contents[3];
-  silc_obj saved_arg_value_pairs = append_args(c, arg_names, SILC_OBJ_NIL);
+  silc_obj saved_arg_value_pairs = SILC_OBJ_NIL;
+
+  /* prepare environment */
+  silc_obj new_env = fn_contents[1]; /* use this function's environment as a base */
 
   /* assoc args */
   silc_obj val_it = arg_values;
@@ -900,14 +905,30 @@ static silc_obj call_lambda(struct silc_ctx_t* c, silc_obj arg_values, silc_obj*
       result = eval_arg;
       goto LRestore;
     }
-    silc_set_sym_assoc(c, sym, eval_arg); /* assoc symbol with an argument */
+
+    new_env = silc_cons(c, silc_cons(c, sym, eval_arg), new_env);
 
     /* go to next value */
     val_it = silc_cdr(c, val_it);
   }
 
-  silc_obj fn_env = fn_contents[1];
-  c->current_env = fn_env; /* update environment */
+  /* override environment */
+  c->current_env = new_env; /* update environment */
+
+  /* set associations */
+  /* TODO: FIX it - this code does not work properly with argument overrides - e.g. (lambda (a) (lambda (a) 1)) */
+  for (silc_obj it = new_env; it != SILC_OBJ_NIL; it = silc_cdr(c, it)) {
+    silc_obj entry = silc_car(c, it);
+    silc_obj arg_name = silc_car(c, entry);
+    silc_obj arg_value = silc_cdr(c, entry);
+
+    /* save previous value */
+    silc_obj prev_arg_value = silc_get_sym_info(c, arg_name, NULL);
+    saved_arg_value_pairs = silc_cons(c, silc_cons(c, arg_name, prev_arg_value), saved_arg_value_pairs);
+
+    /* ...and associate it with a new one */
+    silc_set_sym_assoc(c, arg_name, arg_value);
+  }
 
   /* eval function body */
   result = silc_eval(c, fn_contents[2]);
