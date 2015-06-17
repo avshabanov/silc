@@ -80,3 +80,37 @@ and now garbage collected objects:
 #<CLOSURE-A2>
 ?
 ```
+
+## Lambda calculus demo
+
+This is an illustration how Church numerals can work in silc:
+
+```
+? (define zero (lambda (s) (lambda (z) z)))
+#<CLOSURE-12A>
+? (define succ (lambda (n) (lambda (s) (lambda (z) (s ((n s) z))))))
+#<CLOSURE-19A>
+? (define n0 zero)
+#<CLOSURE-12A>
+? (define n1 (succ n0))
+#<CLOSURE-1E6>
+? (define n2 (succ n1))
+#<CLOSURE-21A>
+? ((n1 inc) 0)
+1
+? ((n0 inc) 0)
+0
+? ((n0 inc) 0)
+0
+? ((n1 inc) 0)
+1
+? (define n3 (succ n2))
+#<CLOSURE-502>
+? (define pow (lambda (b) (lambda (e) (e b))))
+#<CLOSURE-55E>
+? ((((pow n2) n3) inc) 0)
+8
+? ((((pow n3) n2) inc) 0)
+9
+?
+```
