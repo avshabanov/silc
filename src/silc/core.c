@@ -23,7 +23,7 @@
 #include "builtins.h"
 
 
-/******************************************************************************* 
+/*******************************************************************************
  * Helper macros                                                               *
  *******************************************************************************/
 
@@ -31,7 +31,7 @@
 #define countof(arr)    (sizeof(arr) / sizeof(arr[0]))
 #endif
 
-/******************************************************************************* 
+/*******************************************************************************
  * Forward declarations                                                        *
  *******************************************************************************/
 
@@ -42,7 +42,7 @@ static void * xmallocz(size_t size);
 static inline void xfree(void * p);
 
 
-/******************************************************************************* 
+/*******************************************************************************
  * Types                                                                       *
  *******************************************************************************/
 
@@ -324,29 +324,6 @@ static silc_obj check_args(struct silc_ctx_t* c, silc_obj arg_list) {
 #define SILC_FN_SPECIAL       (1 << 1)
 #define SILC_FN_BUILTIN       (1 << 2)
 
-static silc_obj create_env(struct silc_ctx_t* c, silc_obj arg_list, silc_obj prev_env) {
-  if (arg_list == SILC_OBJ_NIL) {
-    /* optimization: if function takes no args, it does not need a new enviroment, it can reuse an old one */
-    return prev_env;
-  }
-
-//  silc_obj not_found = silc_err_from_code(SILC_ERR_INVALID_ARGS);
-//  silc_obj val_map = silc_hash_table(c, 4);
-//  for (silc_obj arg_entry = arg_list; arg_entry != SILC_OBJ_NIL;) {
-//    silc_obj* arg_entry_contents = silc_parse_cons(c, arg_entry);
-//    silc_obj prev = silc_hash_table_put(c, val_map, );
-//  }
-
-  /* alloc function */
-  silc_obj content[] = {
-    prev_env,             /* function flags */
-    arg_list              /* function environment */
-  };
-
-  silc_obj result = silc_int_mem_alloc(c->mem, countof(content), content, SILC_TYPE_OREF, SILC_OREF_ENVIRONMENT_SUBTYPE);
-  return result;
-}
-
 static silc_obj create_function(struct silc_ctx_t* c,
                                 int flags,
                                 silc_obj prev_env,
@@ -367,7 +344,7 @@ static silc_obj create_function(struct silc_ctx_t* c,
   }
 
   SILC_CHECKED_DECLARE(arg_check, check_args(c, arg_list));
-  SILC_CHECKED_DECLARE(env, create_env(c, arg_list, prev_env));
+  SILC_CHECKED_DECLARE(env, prev_env);
 
   /* alloc function */
   silc_obj content[] = {
@@ -800,6 +777,24 @@ silc_obj silc_cdr(struct silc_ctx_t* c, silc_obj cons) {
  * Evaluation
  */
 
+#if 0
+static silc_obj create_env(struct silc_ctx_t* c, silc_obj saved_args, silc_obj prev_env) {
+  if (arg_list == SILC_OBJ_NIL) {
+    /* optimization: if function takes no args, it does not need a new enviroment, it can reuse an old one */
+    return prev_env;
+  }
+
+  /* alloc function */
+  silc_obj content[] = {
+    prev_env,             /* [0] function flags */
+    saved_args            /* [1] saved argument pairs */
+  };
+
+  silc_obj result = silc_int_mem_alloc(c->mem, countof(content), content, SILC_TYPE_OREF, SILC_OREF_ENVIRONMENT_SUBTYPE);
+  return result;
+}
+#endif
+
 static silc_obj push_arguments(struct silc_ctx_t* c, silc_obj cdr, bool special_form) {
   while (cdr != SILC_OBJ_NIL) {
     silc_obj car;
@@ -865,64 +860,46 @@ static silc_obj call_builtin(struct silc_ctx_t* c, silc_obj* cons_contents, silc
   return result;
 }
 
-struct saved_arg_t {
-  silc_obj sym;
-  silc_obj value;
-};
-
-static silc_obj call_lambda(struct silc_ctx_t* c, silc_obj* cons_contents, silc_obj* fn_contents) {
-  silc_obj result;
-
+static silc_obj call_lambda(struct silc_ctx_t* c, silc_obj arg_values, silc_obj* fn_contents) {
+  silc_obj saved_args = SILC_OBJ_NIL;
+  silc_obj result = SILC_OBJ_NIL;
   silc_obj prev_env = c->current_env;
-  c->current_env = fn_contents[1]; /* update environment */
-
   silc_obj arg_list = fn_contents[3];
 
   /* save args */
-  struct saved_arg_t saved_args[8]; /* TODO: make dynamically resizeable (in-heap) */
-  struct saved_arg_t* saved_args_tail = saved_args;
-  for (silc_obj cdr_arg_list = arg_list; cdr_arg_list != SILC_OBJ_NIL;) {
-    silc_obj* cons_arg_list = silc_parse_cons(c->mem, cdr_arg_list);
-    silc_obj car_arg_list = cons_arg_list[0];
-    cdr_arg_list = cons_arg_list[1];
+  silc_obj val_it = arg_values;
+  for (silc_obj it = arg_list; it != SILC_OBJ_NIL; it = silc_cdr(c, it)) {
+    silc_obj sym = silc_car(c, it);
+    silc_obj prev_val = silc_get_sym_info(c, sym, NULL);
+    saved_args = silc_cons(c, silc_cons(c, sym, prev_val), saved_args);
 
-    if (saved_args_tail >= (saved_args + countof(saved_args))) {
-      result = SILC_ERR_INVALID_ARGS; /* Too many arguments */
-      goto LRestore;
-    }
-
-    struct saved_arg_t* a = saved_args_tail++;
-    a->sym = car_arg_list;
-    a->value = silc_get_sym_info(c, car_arg_list, NULL);
-  }
-
-  /* assoc args */
-  silc_obj cdr = cons_contents[1];
-  for (struct saved_arg_t* it = saved_args; it < saved_args_tail; ++it) {
-    if (cdr == SILC_OBJ_NIL) {
+    /* assoc arg */
+    if (val_it == SILC_OBJ_NIL) {
       result = silc_err_from_code(SILC_ERR_INVALID_ARGS); /* invalid number of args */
       goto LRestore;
     }
-
-    cons_contents = silc_parse_cons(c->mem, cdr);
-    silc_obj car = cons_contents[0];
-    cdr = cons_contents[1];
-
-    silc_obj eval_arg = silc_eval(c, car);
+    silc_obj eval_arg = silc_eval(c, silc_car(c, val_it));
     if (silc_try_get_err_code(eval_arg) >= 0) {
       result = eval_arg;
       goto LRestore;
     }
-    silc_set_sym_assoc(c, it->sym, eval_arg);
+    silc_set_sym_assoc(c, sym, eval_arg); /* assoc symbol with an argument */
+
+    /* go to next value */
+    val_it = silc_cdr(c, val_it);
   }
+
+  silc_obj fn_env = fn_contents[1];
+  c->current_env = fn_env; /* update environment */
 
   /* eval function body */
   result = silc_eval(c, fn_contents[2]);
 
 LRestore:
   /* restore args */
-  for (struct saved_arg_t* it = saved_args; it < saved_args_tail; ++it) {
-    silc_set_sym_assoc(c, it->sym, it->value);
+  for (silc_obj it = saved_args; it != SILC_OBJ_NIL; it = silc_cdr(c, it)) {
+    silc_obj entry = silc_car(c, it);
+    silc_set_sym_assoc(c, silc_car(c, entry)/*sym*/, silc_cdr(c, entry)/*val*/);
   }
 
   /* restore environment */
@@ -936,13 +913,11 @@ static silc_obj eval_cons(struct silc_ctx_t* c, silc_obj cons) {
   silc_obj* cons_contents = silc_parse_cons(c->mem, cons);
 
   /* Get CAR and try evaluate it to function */
-  silc_obj fn;
-  SILC_CHECKED_SET(fn, silc_eval(c, cons_contents[0]));
+  SILC_CHECKED_DECLARE(fn, silc_eval(c, cons_contents[0]));
   if (SILC_GET_TYPE(fn) != SILC_TYPE_OREF) {
     return silc_err_from_code(SILC_ERR_NOT_A_FUNCTION);
   }
 
-  /* Try parse as a function */
   int len = 0;
   silc_obj* fn_contents = NULL;
   int subtype = silc_int_mem_parse_ref(c->mem, fn, &len, NULL, &fn_contents);
@@ -958,7 +933,7 @@ static silc_obj eval_cons(struct silc_ctx_t* c, silc_obj cons) {
   if (fn_flags & SILC_FN_BUILTIN) {
     result = call_builtin(c, cons_contents, fn_contents, fn_flags & SILC_FN_SPECIAL);
   } else {
-    result = call_lambda(c, cons_contents, fn_contents);
+    result = call_lambda(c, cons_contents[1], fn_contents);
   }
 
   return result;
