@@ -117,6 +117,22 @@ BEGIN_TEST_METHOD(test_read_cons_nested)
   silc_free_context(c);
 END_TEST_METHOD()
 
+BEGIN_TEST_METHOD(test_read_strings)
+  /* Given: */
+  struct silc_ctx_t* c = silc_new_context();
+  write_and_rewind(out, "(\"\" \"a\" \"a b c\")");
+
+  /* When: */
+  silc_obj o = not_an_error(read_obj(c));
+
+  /* Then: */
+  silc_print(c, o, in);
+  READ_BUF(in, buf);
+  ASSERT(0 == strcmp(buf, "(\"\" \"a\" \"a b c\")"));
+
+  silc_free_context(c);
+END_TEST_METHOD()
+
 BEGIN_TEST_METHOD(test_read_special_true)
   /* Given: */
   struct silc_ctx_t* c = silc_new_context();
@@ -198,6 +214,7 @@ int main(int argc, char** argv) {
   test_read_cons_single();
   test_read_cons_multiple();
   test_read_cons_nested();
+  test_read_strings();
   test_read_special_true();
   test_read_special_false();
   test_read_special_nil();
