@@ -127,7 +127,7 @@ silc_obj silc_int_mem_alloc(struct silc_mem_t* mem, int content_length, const vo
 void silc_int_mem_add_root(struct silc_mem_t* mem, silc_obj o);
 
 struct silc_int_alloc_mode_t {
-  bool add_each_obj_to_root;
+  bool auto_mark_enabled;
   int prev_size;
 };
 
@@ -139,6 +139,11 @@ struct silc_int_alloc_mode_t {
  * will be able to collect them (unless they are referenced from somewhere else which is perfectly valid).
  */
 void silc_int_mem_set_auto_mark_roots(struct silc_mem_t* mem, struct silc_int_alloc_mode_t* prev_mode);
+
+/**
+ * Restores heap state, modified in {@code silc_int_mem_set_auto_mark_roots}.
+ */
+void silc_int_mem_restore_roots(struct silc_mem_t* mem, struct silc_int_alloc_mode_t* prev_mode);
 
 /* General purpose memory allocators */
 

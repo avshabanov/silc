@@ -82,7 +82,7 @@ static void mark_root_objects(struct silc_mem_t* mem) {
 static void init_heap(struct silc_mem_t* mem, struct silc_mem_init_t* init) {
   int init_memory_size = init->init_memory_size;
   if (init_memory_size < 4) {
-    fputs(";; Init memory size is too small\n", stderr);
+    fputs(";; [FATAL] init memory size is too small\n", stderr);
     abort();
   }
 
@@ -238,13 +238,35 @@ void silc_int_mem_add_root(struct silc_mem_t* mem, silc_obj o) {
 }
 
 void silc_int_mem_set_auto_mark_roots(struct silc_mem_t* mem, struct silc_int_alloc_mode_t* prev_mode) {
+  bool prev_auto_mark_enabled = mem->auto_mark_enabled;
   mem->auto_mark_enabled = true;
 
   /* unfold root vector */
   silc_obj* rv = silc_get_oref(mem, mem->root_vector, NULL);
 
   /* store previous size */
+  prev_mode->auto_mark_enabled = prev_auto_mark_enabled;
   prev_mode->prev_size = silc_obj_to_int(rv[1]);
+}
+
+void silc_int_mem_restore_roots(struct silc_mem_t* mem, struct silc_int_alloc_mode_t* prev_mode) {
+  /* unfold root vector */
+  silc_obj* rv = silc_get_oref(mem, mem->root_vector, NULL);
+
+  /* get snapshot of root vector, that needs to be restored */
+  int head_size = prev_mode->prev_size;
+  int tail_size = silc_obj_to_int(rv[1]);
+  SILC_ASSERT(tail_size >= head_size);
+  silc_obj* arr = rv + 2;
+
+  /* restore state */
+  mem->auto_mark_enabled = prev_mode->auto_mark_enabled;
+  rv[1] = silc_int_to_obj(prev_mode->prev_size);
+
+  /* nullify references */
+  for (int i = head_size; i < tail_size; ++i) {
+    arr[i] = SILC_OBJ_NIL;
+  }
 }
 
 void silc_int_mem_gc(struct silc_mem_t * mem) {
@@ -303,7 +325,7 @@ void silc_int_mem_gc(struct silc_mem_t * mem) {
 
     /* paranoid check - this error shouldn't happen */
     if (obj_size < 0) {
-      fputs(";; Internal error: unable to calculate object size (unrecognized object type)\n", stderr);
+      fputs(";; [FATAL] unable to calculate object size (unrecognized object type)\n", stderr);
       abort();
       return;
     }
@@ -384,5 +406,14 @@ silc_obj silc_int_mem_alloc(struct silc_mem_t* mem, int content_length, const vo
       SILC_ASSERT(!"Unknown object type");
   }
 
-  return pos_index < 0 ? SILC_OBJ_NIL : ((((silc_obj) pos_index) << SILC_INT_TYPE_SHIFT) | type);
+  silc_obj result;
+  if (pos_index >= 0) {
+    result = ((((silc_obj) pos_index) << SILC_INT_TYPE_SHIFT) | type);
+    if (mem->auto_mark_enabled) {
+      silc_int_mem_add_root(mem, result);
+    }
+  } else {
+    result = SILC_OBJ_NIL;
+  }
+  return result;
 }

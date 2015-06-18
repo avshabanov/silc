@@ -822,17 +822,6 @@ static silc_obj call_builtin(struct silc_ctx_t* c, silc_obj arg_values, silc_obj
   return result;
 }
 
-//static silc_obj append_args(struct silc_ctx_t* c, silc_obj arg_names, silc_obj prev_arg_value_pairs) {
-//  silc_obj result = prev_arg_value_pairs;
-//  for (silc_obj it = arg_names; it != SILC_OBJ_NIL; it = silc_cdr(c, it)) {
-//    silc_obj arg_name = silc_car(c, it);
-//    silc_obj arg_value = silc_get_sym_info(c, arg_name, NULL);
-//
-//    result = silc_cons(c, silc_cons(c, arg_name, arg_value), result);
-//  }
-//  return result;
-//}
-
 static void restore_args(struct silc_ctx_t* c, silc_obj arg_value_pairs) {
   for (silc_obj it = arg_value_pairs; it != SILC_OBJ_NIL; it = silc_cdr(c, it)) {
     silc_obj entry = silc_car(c, it);
@@ -902,7 +891,7 @@ LRestore:
   return result;
 }
 
-static silc_obj eval_cons(struct silc_ctx_t* c, silc_obj cons) {
+static silc_obj eval_cons_or_return_error(struct silc_ctx_t* c, silc_obj cons) {
   /* Parse cons */
   silc_obj* cons_contents = silc_parse_cons(c->mem, cons);
 
@@ -930,6 +919,14 @@ static silc_obj eval_cons(struct silc_ctx_t* c, silc_obj cons) {
     result = call_lambda(c, cons_contents[1], fn_contents);
   }
 
+  return result;
+}
+
+static silc_obj eval_cons(struct silc_ctx_t* c, silc_obj cons) {
+  struct silc_int_alloc_mode_t prev_mode;
+  silc_int_mem_set_auto_mark_roots(c->mem, &prev_mode);
+  silc_obj result = eval_cons_or_return_error(c, cons);
+  silc_int_mem_restore_roots(c->mem, &prev_mode);
   return result;
 }
 
