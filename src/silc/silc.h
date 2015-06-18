@@ -195,7 +195,11 @@ static inline int silc_try_get_err_code(silc_obj obj) {
 #define SILC_OREF_SYMBOL_SUBTYPE      (10)
 #define SILC_OREF_HASHTABLE_SUBTYPE   (20)
 #define SILC_OREF_FUNCTION_SUBTYPE    (21)
-#define SILC_OREF_ENVIRONMENT_SUBTYPE (22)
+
+/** Service object: stack */
+#define SILC_OREF_STACK_SUBTYPE       (50)
+/** Service object: GC root object */
+#define SILC_OREF_ROOT_VECTOR_SUBTYPE (51)
 
 /**
  * Contains length, then sequence of bytes.
@@ -241,8 +245,8 @@ struct silc_funcall_t {
 
 /* Service functions */
 
-struct silc_ctx_t * silc_new_context();
-void silc_free_context(struct silc_ctx_t * c);
+struct silc_ctx_t* silc_new_context();
+void silc_free_context(struct silc_ctx_t* c);
 
 
 /* Helper functions */

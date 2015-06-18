@@ -1,16 +1,6 @@
 #include "test.h"
 #include "mem.h"
 
-static void* empty_root_obj_iter_start(struct silc_mem_init_t* mem_init) {
-  return NULL;
-}
-
-static void* empty_root_obj_iter_next(struct silc_mem_init_t* mem_init,
-                                      void* iter_context,
-                                      silc_obj** objs, int* size) {
-  return NULL;
-}
-
 static void oom_abort(struct silc_mem_init_t* mem_init) {
   fputs(";; " __FILE__ " - out of memory, aborting...\n", stderr);
   abort();
@@ -22,8 +12,7 @@ static struct silc_mem_init_t g_mem_init_empty_root_objs = {
   .context = NULL,
   .init_memory_size = MEM_SIZE,
   .max_memory_size = MEM_SIZE,
-  .root_obj_iter_start = empty_root_obj_iter_start,
-  .root_obj_iter_next = empty_root_obj_iter_next,
+  .init_root_vector_size = 10,
   .oom_abort = oom_abort,
   .alloc_mem = xmalloc,
   .free_mem = xfree
@@ -42,9 +31,10 @@ BEGIN_TEST_METHOD(test_get_initial_statistics)
   silc_int_mem_calc_stats(m, &stats);
 
   ASSERT(MEM_SIZE == stats.total_memory);
-  ASSERT(MEM_SIZE == stats.free_memory);
-  ASSERT(MEM_SIZE == stats.usable_memory);
-  ASSERT(0 == stats.pos_count);
+
+  ASSERT((MEM_SIZE - m->init->init_root_vector_size - 5) == stats.free_memory);
+  ASSERT(stats.free_memory == stats.usable_memory);
+  ASSERT(1 == stats.pos_count);
   ASSERT(0 == stats.free_pos_count);
 
   /* cleanup test objects */
@@ -169,7 +159,7 @@ BEGIN_TEST_METHOD(test_gc_full_cleanup)
 
   silc_int_mem_calc_stats(m, &stats);
 
-  ASSERT(3 == stats.pos_count); /* 3 objects allocated in total */
+  ASSERT(4 == stats.pos_count); /* 3 objects allocated in total + 1 root object */
   ASSERT(MEM_SIZE == stats.total_memory);
   ASSERT(stats.total_memory > stats.free_memory);
   ASSERT(stats.free_memory == stats.usable_memory);
@@ -178,46 +168,21 @@ BEGIN_TEST_METHOD(test_gc_full_cleanup)
   silc_int_mem_gc(m);
 
   silc_int_mem_calc_stats(m, &stats);
-  ASSERT(0 == stats.pos_count);
+  ASSERT(1 == stats.pos_count);
   ASSERT(0 == stats.free_pos_count);
   ASSERT(MEM_SIZE == stats.total_memory);
-  ASSERT(stats.total_memory == stats.free_memory);
+  ASSERT(stats.total_memory == (stats.free_memory + 5 + m->init->init_root_vector_size));
   ASSERT(stats.free_memory == stats.usable_memory);
  
   /* cleanup test objects */
   silc_int_mem_free(m);
-END_TEST_METHOD() 
-
-
-struct partial_gc_t {
-  silc_obj root_obj_arr[10];
-};
-
-static void* partial_gc_root_obj_iter_start(struct silc_mem_init_t* mem_init) {
-  return mem_init->context;
-}
-
-static void* partial_gc_root_obj_iter_next(struct silc_mem_init_t* mem_init,
-                                           void* iter_context,
-                                           silc_obj** objs, int* size) {
-  struct partial_gc_t * pgc = (struct partial_gc_t*) iter_context;
-  *objs = pgc->root_obj_arr;
-  *size = countof(pgc->root_obj_arr);
-  return NULL;
-}
+END_TEST_METHOD()
 
 BEGIN_TEST_METHOD(test_gc_partial_cleanup)
   struct silc_mem_t mem = {0};
   struct silc_mem_t* m = &mem;
 
-  struct partial_gc_t pgc = {.root_obj_arr = {0}};
-  struct silc_mem_init_t init;
-  memcpy(&init, &g_mem_init_empty_root_objs, sizeof(struct silc_mem_init_t));
-  init.context = &pgc;
-  init.root_obj_iter_start = partial_gc_root_obj_iter_start;
-  init.root_obj_iter_next = partial_gc_root_obj_iter_next;
-
-  silc_int_mem_init(m, &init);
+  silc_int_mem_init(m, &g_mem_init_empty_root_objs);
 
   /* Test code goes here - allocate a few different objects */
   const char* a1 = "three";
@@ -258,19 +223,19 @@ BEGIN_TEST_METHOD(test_gc_partial_cleanup)
 
   silc_int_mem_calc_stats(m, &stats);
 
-  ASSERT(8 == stats.pos_count); /* 3 objects allocated in total */
+  ASSERT(9 == stats.pos_count); /* 8 objects allocated in total + 1 root object */
   ASSERT(MEM_SIZE == stats.total_memory);
   ASSERT(stats.total_memory > stats.free_memory);
   ASSERT(stats.free_memory == stats.usable_memory);
 
   /* trigger gc and recheck statistics */
-  pgc.root_obj_arr[0] = o1;
-  pgc.root_obj_arr[1] = o7;
+  silc_int_mem_add_root(m, o1);
+  silc_int_mem_add_root(m, o7);
   silc_int_mem_gc(m);
 
   silc_int_mem_calc_stats(m, &stats);
-  ASSERT(7 == stats.pos_count);
-  ASSERT(2 == stats.free_pos_count); /* 7-2 == 5: o7, o6, o5, o4, o1 should be reachable */
+  ASSERT(8 == stats.pos_count);
+  ASSERT(2 == stats.free_pos_count); /* 8-1-2 == 5: o7, o6, o5, o4, o1 should be reachable */
   ASSERT(MEM_SIZE == stats.total_memory);
 
   silc_obj objs2[] = { o7, o6, o5, o4, o1 };

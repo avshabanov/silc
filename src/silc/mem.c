@@ -74,20 +74,9 @@ static void gc_mark(struct silc_mem_t * mem, silc_obj v) {
   }
 }
 
-static void mark_root_objects(struct silc_mem_t * mem) {
-  for (void * context = mem->init->root_obj_iter_start(mem->init);;) {
-    silc_obj * root_obj_arr = NULL;
-    int root_obj_arr_size = 0;
-    context = mem->init->root_obj_iter_next(mem->init, context, &root_obj_arr, &root_obj_arr_size);
-
-    for (int n = 0; n < root_obj_arr_size; ++n) {
-      gc_mark(mem, root_obj_arr[n]);
-    }
-
-    if (context == NULL) {
-      break;
-    }
-  }
+static void mark_root_objects(struct silc_mem_t* mem) {
+  /* TODO: optimize by not looking into the entire object contents */
+  gc_mark(mem, mem->root_vector);
 }
 
 static void init_heap(struct silc_mem_t* mem, struct silc_mem_init_t* init) {
@@ -190,18 +179,72 @@ static void update_positions(struct silc_mem_t* mem, int pos_index, int obj_size
   }
 }
 
+#define SILC_INT_MEM_INITIAL_ROOT_VECTOR_SIZE     (1000)
+
+static silc_obj create_root_vector(struct silc_mem_t* mem, int size) {
+  silc_obj root_vector = silc_int_mem_alloc(mem, size + 2, NULL, SILC_TYPE_OREF, SILC_OREF_ROOT_VECTOR_SUBTYPE);
+
+  silc_obj* rv = silc_get_oref(mem, root_vector, NULL);
+
+  rv[0] = silc_int_to_obj(size); /* total capacity */
+  rv[1] = SILC_OBJ_ZERO; /* current size */
+
+  return root_vector;
+}
 
 /* External functions */
-
-
 
 void silc_int_mem_init(struct silc_mem_t* new_mem, struct silc_mem_init_t* init) {
   new_mem->init = init;
   init_heap(new_mem, init);
+
+  /* Alloc root vector */
+  if (init->init_root_vector_size <= 0) {
+    init->init_root_vector_size = SILC_INT_MEM_INITIAL_ROOT_VECTOR_SIZE;
+  }
+  new_mem->root_vector = create_root_vector(new_mem, init->init_root_vector_size);
 }
 
 void silc_int_mem_free(struct silc_mem_t * mem) {
   mem->init->free_mem(mem->buf);
+}
+
+void silc_int_mem_add_root(struct silc_mem_t* mem, silc_obj o) {
+  /* unfold root vector */
+  silc_obj* rv = silc_get_oref(mem, mem->root_vector, NULL);
+  int capacity = silc_obj_to_int(rv[0]);
+  int size = silc_obj_to_int(rv[1]);
+  silc_obj* arr = rv + 2;
+
+  /* update size and check that it is within the desired capacity */
+  int new_size = size + 1;
+  if (new_size > capacity) {
+    /* resize root vector */
+    int new_capacity = capacity * 2;
+    silc_obj new_root_vector = create_root_vector(mem, new_capacity);
+    /* copy contents */
+    silc_obj* new_rv = silc_get_oref(mem, new_root_vector, NULL);
+    memcpy(new_rv, rv, sizeof(silc_obj) * new_capacity);
+    rv[0] = silc_int_to_obj(new_capacity);
+
+    /* update root vector pointer and retry operation */
+    mem->root_vector = new_root_vector;
+    return;
+  }
+
+  /* add an object and update size */
+  arr[size] = o;
+  rv[1] = silc_int_to_obj(new_size);
+}
+
+void silc_int_mem_set_auto_mark_roots(struct silc_mem_t* mem, struct silc_int_alloc_mode_t* prev_mode) {
+  mem->auto_mark_enabled = true;
+
+  /* unfold root vector */
+  silc_obj* rv = silc_get_oref(mem, mem->root_vector, NULL);
+
+  /* store previous size */
+  prev_mode->prev_size = silc_obj_to_int(rv[1]);
 }
 
 void silc_int_mem_gc(struct silc_mem_t * mem) {

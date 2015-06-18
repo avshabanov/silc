@@ -64,8 +64,7 @@ struct silc_ctx_t {
   struct silc_mem_init_t* mem_init;
   struct silc_mem_t*      mem;
 
-  /* root object for service data */
-  silc_obj              root_cons;
+  /* hash table for storing symbols */
   silc_obj              sym_name_hash_table;
 
   /* builtin functions */
@@ -83,7 +82,7 @@ struct silc_ctx_t {
 };
 
 struct silc_settings_t {
-  FILE *    out;        /* default output stream (used in print function) */
+  FILE*                 out; /* default output stream (used in print function) */
 };
 
 
@@ -108,49 +107,6 @@ static inline void xfree(void * p) {
   free(p);
 }
 
-/* Memory-related */
-
-static inline silc_obj* get_oref(struct silc_mem_t* mem, silc_obj obj) {
-  int content_length = 0;
-  silc_obj* result = NULL;
-  int subtype = silc_int_mem_parse_ref(mem, obj, &content_length, NULL, &result);
-  SILC_ASSERT(result != NULL && subtype >= 0);
-  return result;
-}
-
-/* Memory management-related */
-
-#define ROIS_ENTRY1   ((void*)1)
-#define ROIS_ENTRY2   ((void*)2)
-#define ROIS_ENTRY3   ((void*)3)
-
-static void* root_obj_iter_start(struct silc_mem_init_t* mem_init) {
-  return ROIS_ENTRY1;
-}
-
-static void* root_obj_iter_next(struct silc_mem_init_t* mem_init,
-                                void* iter_context,
-                                silc_obj** objs, int* size) {
-  void* result = NULL;
-  struct silc_ctx_t* c = mem_init->context;
-
-  if (iter_context == ROIS_ENTRY1) {
-    *objs = c->stack;
-    *size = c->stack_end;
-    result = ROIS_ENTRY2;
-  } else if (iter_context == ROIS_ENTRY2) {
-    *objs = &c->root_cons;
-    *size = 1;
-    result = ROIS_ENTRY3;
-  } else if (iter_context == ROIS_ENTRY3) {
-    *objs = &c->current_env;
-    *size = 1;
-    result = NULL; /* no more roots */
-  }
-
-  return result;
-}
-
 /* Service functions */
 
 #define SILC_DEFAULT_STACK_SIZE           (1024)
@@ -172,8 +128,6 @@ static void init_mem(struct silc_ctx_t* c) {
   init->context = c;
   init->init_memory_size = 1024 * 1024;
   init->max_memory_size = 16 * 1024 * 1024;
-  init->root_obj_iter_start = root_obj_iter_start;
-  init->root_obj_iter_next = root_obj_iter_next;
   init->oom_abort = oom_abort;
   init->alloc_mem = xmalloc;
   init->free_mem = xfree;
@@ -187,7 +141,7 @@ static void init_mem(struct silc_ctx_t* c) {
 
 static void init_globals(struct silc_ctx_t* c) {
   c->sym_name_hash_table = silc_hash_table(c, 8179/*prime*/);
-  c->root_cons = silc_cons(c, c->sym_name_hash_table, SILC_OBJ_NIL);
+  silc_int_mem_add_root(c->mem, c->sym_name_hash_table);
 }
 
 static silc_fn_ptr g_silc_builtin_functions[] = {
@@ -242,7 +196,7 @@ static silc_obj* lookup_hash_table_cell(struct silc_ctx_t* c, silc_obj hash_tabl
 
 silc_obj silc_hash_table(struct silc_ctx_t* c, int initial_size) {
   silc_obj result = silc_int_mem_alloc(c->mem, initial_size + 1, NULL, SILC_TYPE_OREF, SILC_OREF_HASHTABLE_SUBTYPE);
-  get_oref(c->mem, result)[0] = silc_int_to_obj(0); /* element count */
+  silc_get_oref(c->mem, result, NULL)[0] = silc_int_to_obj(0); /* element count */
   return result;
 }
 
@@ -401,7 +355,20 @@ static void init_builtins(struct silc_ctx_t* c) {
   add_builtin_function(c, "quit", &silc_internal_fn_quit, false);
 }
 
-struct silc_ctx_t * silc_new_context() {
+static void init_stack(struct silc_ctx_t* c) {
+  int stack_size = SILC_DEFAULT_STACK_SIZE;
+
+  silc_obj stack_obj = silc_int_mem_alloc(c->mem, stack_size, NULL, SILC_TYPE_OREF, SILC_OREF_STACK_SUBTYPE);
+
+  /* immediately mark stack as a root object */
+  silc_int_mem_add_root(c->mem, stack_obj);
+
+  /* cache stack pointer for performance */
+  c->stack = silc_get_oref(c->mem, stack_obj, NULL);
+  c->stack_size = stack_size;
+}
+
+struct silc_ctx_t* silc_new_context() {
   struct silc_ctx_t* c = xmallocz(sizeof(struct silc_ctx_t));
 
   /* settings */
@@ -409,12 +376,11 @@ struct silc_ctx_t * silc_new_context() {
   s->out = stdout;
   c->settings = s;
 
-  /* stack */
-  c->stack = xmallocz(SILC_DEFAULT_STACK_SIZE * sizeof(silc_obj));
-  c->stack_size = SILC_DEFAULT_STACK_SIZE;
-
   /* heap memory */
   init_mem(c);
+
+  /* stack, uses heap memory */
+  init_stack(c);
 
   /* globals */
   init_globals(c);
@@ -427,7 +393,7 @@ void silc_free_context(struct silc_ctx_t * c) {
   silc_int_mem_free(c->mem);
   xfree(c->mem);
   xfree(c->settings);
-  xfree(c->stack);
+  xfree(c->mem_init);
 
   xfree(c);
 }
@@ -791,24 +757,6 @@ silc_obj silc_cdr(struct silc_ctx_t* c, silc_obj cons) {
  * Evaluation
  */
 
-#if 0
-static silc_obj create_env(struct silc_ctx_t* c, silc_obj name_val_pairs, silc_obj prev_env) {
-  if (name_val_pairs == SILC_OBJ_NIL) {
-    /* optimization: if function takes no args, it does not need a new enviroment, it can reuse an old one */
-    return prev_env;
-  }
-
-  /* alloc function */
-  silc_obj content[] = {
-    prev_env,             /* [0] function flags */
-    name_val_pairs        /* [1] saved name:argument pairs */
-  };
-
-  silc_obj result = silc_int_mem_alloc(c->mem, countof(content), content, SILC_TYPE_OREF, SILC_OREF_ENVIRONMENT_SUBTYPE);
-  return result;
-}
-#endif
-
 static silc_obj push_arguments(struct silc_ctx_t* c, silc_obj cdr, bool special_form) {
   while (cdr != SILC_OBJ_NIL) {
     silc_obj car;
@@ -842,7 +790,7 @@ static silc_obj push_arguments(struct silc_ctx_t* c, silc_obj cdr, bool special_
   return SILC_OBJ_NIL;
 }
 
-static silc_obj call_builtin(struct silc_ctx_t* c, silc_obj* cons_contents, silc_obj* fn_contents, bool special) {
+static silc_obj call_builtin(struct silc_ctx_t* c, silc_obj arg_values, silc_obj* fn_contents, bool special) {
   SILC_ASSERT(SILC_OBJ_NIL == fn_contents[1] && /* environment should always be null for builtin functions */
               SILC_OBJ_NIL == fn_contents[3] /* builtin function arglist should also be null */);
 
@@ -850,7 +798,7 @@ static silc_obj call_builtin(struct silc_ctx_t* c, silc_obj* cons_contents, silc
   int prev_end = c->stack_end;
 
   /* put arguments to the function stack */
-  silc_obj result = push_arguments(c, cons_contents[1], special);
+  silc_obj result = push_arguments(c, arg_values, special);
   if (silc_try_get_err_code(result) < 0) {
     int fn_pos = silc_obj_to_int(fn_contents[2]); /* function position */
     SILC_ASSERT(fn_pos >= 0 && fn_pos < c->fn_count);
@@ -977,7 +925,7 @@ static silc_obj eval_cons(struct silc_ctx_t* c, silc_obj cons) {
 
   silc_obj result;
   if (fn_flags & SILC_FN_BUILTIN) {
-    result = call_builtin(c, cons_contents, fn_contents, fn_flags & SILC_FN_SPECIAL);
+    result = call_builtin(c, cons_contents[1], fn_contents, fn_flags & SILC_FN_SPECIAL);
   } else {
     result = call_lambda(c, cons_contents[1], fn_contents);
   }

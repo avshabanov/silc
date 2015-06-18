@@ -16,17 +16,11 @@
 
 #include "silc.h"
 
+#include <stdbool.h>
+
 struct silc_mem_init_t;
 
-typedef void* (* silc_internal_root_obj_iter_start_pfn)(struct silc_mem_init_t* mem_init);
-typedef void* (* silc_internal_root_obj_iter_next_pfn)(struct silc_mem_init_t* mem_init,
-                                                       void* iter_context,
-                                                       silc_obj** objs, int* size);
-
-typedef void (* silc_internal_report_gc_stats_pfn)(struct silc_mem_init_t* mem_init, int cell_free);
-
 typedef void (* silc_internal_oom_abort_pfn)(struct silc_mem_init_t* mem_init);
-
 
 struct silc_mem_init_t {
   void*                   context; /* custom context, for callback purposes */
@@ -34,16 +28,14 @@ struct silc_mem_init_t {
   int                     init_memory_size; /* initial memory size */
   int                     max_memory_size; /* maximum memory size */
 
-  /* for root objects discovery (used for garbage collector purposes) */
-  silc_internal_root_obj_iter_start_pfn     root_obj_iter_start;
-  silc_internal_root_obj_iter_next_pfn      root_obj_iter_next;
+  int                     init_root_vector_size; /* initial size of the root vector */
 
   /* function, that should be called on OOM and gracefully abort execution */
   silc_internal_oom_abort_pfn               oom_abort;
 
   /* custom mem alloc functions, malloc should never return null */
   void* (* alloc_mem)(size_t size);
-  void (* free_mem)(void * p);
+  void (* free_mem)(void* p);
 };
 
 struct silc_mem_t {
@@ -71,9 +63,18 @@ struct silc_mem_t {
 
   /**
    * Used for optimization purposes only.
-   *
+   * This index allows to skip positions that are not vacant and every search updates this index with
+   * the next unoccupied index, so that the next allocation will be the fastest possible.
    */
   int                       cached_last_occupied_pos_index;
+
+  /*
+   * Root objects marker. This object serves as a marker for object roots.
+   */
+  silc_obj                  root_vector;
+
+  /** Indicates whether or not auto mark enabled (disabled by default) */
+  bool                      auto_mark_enabled;
 };
 
 struct silc_mem_stats_t {
@@ -120,6 +121,24 @@ void silc_int_mem_calc_stats(struct silc_mem_t* mem, struct silc_mem_stats_t* st
  */
 silc_obj silc_int_mem_alloc(struct silc_mem_t* mem, int content_length, const void* content, int type, int subtype);
 
+/**
+ * Marks an object as a root
+ */
+void silc_int_mem_add_root(struct silc_mem_t* mem, silc_obj o);
+
+struct silc_int_alloc_mode_t {
+  bool add_each_obj_to_root;
+  int prev_size;
+};
+
+/**
+ * Enables auto mark and saves previous state of root vector and auto_mark_enabled to the provided mode variable.
+ * This tricky function is needed for evaluation: in order to simplify code and not mark every intermediate object
+ * as being referenced from certain root, every new object will be automatically marked as root whenever evaluation
+ * occurs. Once evaluation is done, the automarked objects are wiped out from the root vector and garbage collector
+ * will be able to collect them (unless they are referenced from somewhere else which is perfectly valid).
+ */
+void silc_int_mem_set_auto_mark_roots(struct silc_mem_t* mem, struct silc_int_alloc_mode_t* prev_mode);
 
 /* General purpose memory allocators */
 
@@ -205,5 +224,12 @@ static inline silc_obj* silc_parse_cons(struct silc_mem_t* mem, silc_obj obj) {
   silc_obj* result = NULL;
   int subtype = silc_int_mem_parse_ref(mem, obj, &content_length, NULL, &result);
   SILC_ASSERT(result != NULL && content_length == 2 && subtype == SILC_INT_MEM_CONS_SUBTYPE);
+  return result;
+}
+
+static inline silc_obj* silc_get_oref(struct silc_mem_t* mem, silc_obj obj, int* content_length) {
+  silc_obj* result = NULL;
+  int subtype = silc_int_mem_parse_ref(mem, obj, content_length, NULL, &result);
+  SILC_ASSERT(result != NULL && subtype >= 0);
   return result;
 }
